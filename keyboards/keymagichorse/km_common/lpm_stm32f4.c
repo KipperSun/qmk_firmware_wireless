@@ -24,6 +24,7 @@
 #include "bhq.h"
 #include "report_buffer.h"
 #include "uart.h"
+#include "bhq_common.h"
 
 #if SHIFT595_ENABLED
 #   include "74hc595.h"
@@ -58,7 +59,7 @@ void lpm_init(void)
 
     gpio_write_pin_high(BHQ_INT_PIN);
 
-// usb
+    // usb
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
     palEnableLineEvent(USB_POWER_SENSE_PIN, PAL_EVENT_MODE_RISING_EDGE);
 
@@ -77,14 +78,6 @@ __attribute__((weak)) void lpm_device_power_close(void)
 __attribute__((weak)) void lpm_set_unused_pins_to_input_analog(void)
 {
 
-}
-
-__attribute__((weak)) bool usb_power_connected(void) {
-#ifdef USB_POWER_SENSE_PIN
-    return readPin(USB_POWER_SENSE_PIN) == USB_POWER_CONNECTED_LEVEL;
-#else
-    return true;
-#endif
 }
 
 void My_PWR_EnterSTOPMode(void)

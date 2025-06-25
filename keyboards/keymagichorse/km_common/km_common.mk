@@ -21,6 +21,11 @@ include $(wildcard $(PLATFORM_PATH)/*/mcu_selection.mk)
 $(info !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MCU_SERIES = $(MCU_SERIES))
 $(info !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MCU_LDSCRIPT = $(MCU_LDSCRIPT))
 
+
+
+
+VPATH += keyboards/keymagichorse/km_common/
+
 ifeq ($(strip $(KB_LPM_ENABLED)), yes)
     ifneq ($(filter $(MCU_SERIES),STM32F4xx),)
         OPT_DEFS += -DKB_LPM_ENABLED
@@ -32,10 +37,7 @@ ifeq ($(strip $(KB_LPM_ENABLED)), yes)
     endif
 endif
 
-
-VPATH += keyboards/keymagichorse/km_common/
-
+SRC += km_common/battery.c
 SRC += km_common/bhq_common.c
 SRC += km_common/transport.c
 SRC += km_common/wireless.c
-SRC += km_common/battery.c

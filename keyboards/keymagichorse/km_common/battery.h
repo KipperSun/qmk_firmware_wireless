@@ -15,7 +15,6 @@
  */
 
 #pragma once
-
 // ------------------------ 电池分压电阻的配置 ------------------------
 /* Battery voltage resistive voltage divider setting of MCU */
 #ifndef BAT_R_UPPER                        

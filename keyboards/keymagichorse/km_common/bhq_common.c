@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "bhq_common.h"
 #include "bhq.h"
 #include "wireless.h"
@@ -22,11 +23,23 @@
 #include "battery.h"
 #include "outputselect.h"
 #include "usb_main.h"
+#include "battery.h"
 # if defined(KB_LPM_ENABLED)
 #   include "lpm.h"
 #endif
 
-
+bool usb_power_connected(void) {
+    km_printf("usb io:%d\n",readPin(USB_POWER_SENSE_PIN));
+#ifdef USB_POWER_SENSE_PIN
+    return readPin(USB_POWER_SENSE_PIN) == USB_POWER_CONNECTED_LEVEL;
+#else
+    return true;
+#endif
+}
+void bhq_common_init(void)
+{
+    gpio_set_pin_input(USB_POWER_SENSE_PIN);
+}
 // --------------------  都是用于处理按键触发的变量 --------------------
 uint16_t this_down_wireless_keycode = 0;
 uint32_t down_wirlees_keycode_time = 0;
@@ -191,6 +204,11 @@ void bhq_switch_host_task(void){
     }
 }
 
+void bhq_wireless_task(void)
+{
+    bhq_switch_host_task();
+    battery_percent_read_task();
+}
 
 // Keyboard level code can override this, but shouldn't need to.
 // Controlling custom features should be done by overriding
