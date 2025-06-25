@@ -77,7 +77,7 @@ void rgb_adv_unblink_all_layer(void) {
 
 bool led_update_user(led_t led_state) {
     // 如果当前是USB连接，或者是蓝牙/2.4G连接且已配对连接状态
-    if( (transport_get() > KB_TRANSPORT_USB && wireless_get() == WT_STATE_CONNECTED) || transport_get() == KB_TRANSPORT_USB)
+    if( (transport_get() > KB_TRANSPORT_USB && wireless_get() == WT_STATE_CONNECTED) || ( usb_power_connected() == true && transport_get() == KB_TRANSPORT_USB))
     {
         rgblight_set_layer_state(3, led_state.caps_lock);
         km_printf("led_update_user\r\n");
@@ -139,6 +139,8 @@ void keyboard_post_init_kb(void)
     rgblight_disable();
     rgblight_layers = _rgb_layers;
 #endif
+    rgblight_disable();
+    rgb_adv_unblink_all_layer();
 }
 
 #   if defined(KB_LPM_ENABLED)

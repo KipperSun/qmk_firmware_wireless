@@ -89,11 +89,8 @@ void battery_read_and_update_data(void)
         km_printf("usb_power_connected\r\n");
         return;  // 不上传电量
     }
-    // 电量只能下降
-    if (new_percent < battery_percent) {
-        battery_percent = new_percent;
-        bhq_update_battery_percent(battery_percent, voltage_mV_actual);  // 上报电量
-    }
+    battery_percent = new_percent;
+    bhq_update_battery_percent(battery_percent, voltage_mV_actual);  // 上报电量
     battery_timer = 0;
 }
 void battery_percent_read_task(void)
