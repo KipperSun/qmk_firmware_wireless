@@ -85,7 +85,7 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
             }
         }
     }
-
+    km_printf("keycide:%d %d\n",keycode,record->event.pressed);
     // 蓝牙模式点按
     if(keycode == BL_SW_0 || keycode == BL_SW_1 || keycode == BL_SW_2)
     {
@@ -110,6 +110,7 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                         key_ble_host_index = 2;
                         break;  
                 }
+                km_printf("key short down:bleid->%d\n",key_ble_host_index);
                 // 打开非配对模式蓝牙广播 10 = 10S
                 bhq_OpenBleAdvertising(key_ble_host_index, 30);
                 transport_set(key_ble_host_index + KB_TRANSPORT_BLUETOOTH_1);  
@@ -117,7 +118,7 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
             this_down_wireless_keycode = 0;
             down_wirlees_keycode_time = 0;
         }
-        return false;
+        return true;
     }
 
 
@@ -132,7 +133,7 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                 bhq_OpenBleAdvertising(key_ble_host_index, 30);
                 transport_set(KB_TRANSPORT_BLUETOOTH_1);
             }
-            return false;
+            return true;
         }
         case RF_TOG:
         {
@@ -141,7 +142,7 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                 bhq_switch_rf_easy_kb();
                 transport_set(KB_TRANSPORT_RF);  
             }
-            return false;
+            return true;
         }
         case USB_TOG:
         {
@@ -151,7 +152,7 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                 bhq_CloseBleAdvertising();
                 transport_set(KB_TRANSPORT_USB);  
             }
-            return false;
+            return true;
         }
         case BLE_OFF:
         {
@@ -160,12 +161,8 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                 // 关闭蓝牙广播
                 bhq_CloseBleAdvertising();
             }
-            return false;
+            return true;
         }
-    }
-    if(IS_WIRELESS_TRANSPORT(transport_get()) == true && wireless_get()  != WT_STATE_CONNECTED )
-    {
-        return false;
     }
     return true;
 }
@@ -193,6 +190,7 @@ void bhq_switch_host_task(void){
                     key_ble_host_index = 2;
                     break;
             }
+            km_printf("key long down:bleid->%d\n",key_ble_host_index);
             // 打开配对广播
             bhq_SetPairingMode(key_ble_host_index, 30);
             transport_set(key_ble_host_index + KB_TRANSPORT_BLUETOOTH_1);  
