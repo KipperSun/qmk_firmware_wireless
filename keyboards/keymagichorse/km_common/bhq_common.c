@@ -15,6 +15,7 @@
  */
 
 #include "config.h"
+#include "bluetooth.h"
 #include "bhq_common.h"
 #include "bhq.h"
 #include "wireless.h"
@@ -36,6 +37,12 @@ bool usb_power_connected(void) {
     return true;
 #endif
 }
+
+__attribute__((weak)) void bhq_set_lowbat_led(bool on)
+{
+    // TODO:补充
+}
+
 void bhq_common_init(void)
 {
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
@@ -96,7 +103,7 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
         }
         else
         {
-            if(timer_elapsed32(down_wirlees_keycode_time) >= 80 && timer_elapsed32(down_wirlees_keycode_time) <= 800)
+            if(timer_elapsed32(down_wirlees_keycode_time) >= 30 && timer_elapsed32(down_wirlees_keycode_time) <= 800)
             {
                 switch (keycode)
                 {
@@ -202,10 +209,36 @@ void bhq_switch_host_task(void){
     }
 }
 
+void bhq_battery_task(void)
+{
+    static uint32_t battery_low_led_flicker_time = 0;
+    static uint8_t led_sta = 0;
+    if(battery_get() > 50)
+    {
+        battery_low_led_flicker_time = 0;
+        bluetooth_enable();
+    }
+    else
+    {
+        if(battery_low_led_flicker_time == 0)
+        {
+            battery_low_led_flicker_time = timer_read32();
+        }
+        if(timer_elapsed32(battery_low_led_flicker_time) >= 500)
+        {
+            battery_low_led_flicker_time = 0;
+            led_sta = !led_sta;
+            bhq_set_lowbat_led(led_sta);
+        }
+        bluetooth_disable();
+    }
+}
+
 void bhq_wireless_task(void)
 {
     bhq_switch_host_task();
     battery_percent_read_task();
+    bhq_battery_task();
 }
 
 // Keyboard level code can override this, but shouldn't need to.

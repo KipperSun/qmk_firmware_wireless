@@ -64,15 +64,22 @@ const rgblight_segment_t PROGMEM bt_conn1[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HS
 const rgblight_segment_t PROGMEM bt_conn2[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_TURQUOISE} );   // 通道2：春绿色
 const rgblight_segment_t PROGMEM bt_conn3[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_ORANGE} );        // 通道3：紫色
 const rgblight_segment_t PROGMEM caps_lock_[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_PURPLE} );       // 大小写：白色
+const rgblight_segment_t PROGMEM bat_low_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_RED} );       // 低电量：红
 
 const rgblight_segment_t* const PROGMEM _rgb_layers[] = RGBLIGHT_LAYERS_LIST( 
-    bt_conn1, bt_conn2, bt_conn3, caps_lock_
+    bt_conn1, bt_conn2, bt_conn3, caps_lock_, bat_low_led
 );
 
 void rgb_adv_unblink_all_layer(void) {
-    for (uint8_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < 4; i++) {
         rgblight_unblink_layer(i);
     }
+}
+
+void bhq_set_lowbat_led(bool on)
+{
+    rgb_adv_unblink_all_layer();
+    rgblight_set_layer_state(4, on);
 }
 
 bool led_update_user(led_t led_state) {

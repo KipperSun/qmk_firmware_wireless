@@ -46,7 +46,7 @@ void battery_read_and_update_data(void)
     uint16_t max_v = 0;
     uint16_t min_v = 0xFFFF;
     const uint8_t  NUM_SAMPLES  =   10;
-    const uint8_t  ADC_DEADBAND  =  2;
+    const uint8_t  ADC_DEADBAND  =  5;
     static uint16_t last_adc = 0;
 
     analogReadPin(BATTER_ADC_PIN);
@@ -65,7 +65,7 @@ void battery_read_and_update_data(void)
     sum -= (uint32_t)max_v + (uint32_t)min_v;
     uint16_t new_adc = (uint16_t)(sum / (NUM_SAMPLES - 2));
 
-    /* 死区滤波：只有跳出 ±2 LSB 才更新 */
+    /* 死区滤波：只有跳出 ±5 LSB 才更新 */
     if (new_adc > last_adc + ADC_DEADBAND ||
         new_adc < last_adc - ADC_DEADBAND) {
         last_adc = new_adc;
@@ -100,7 +100,7 @@ void battery_percent_read_task(void)
         battery_timer = timer_read32();
     }
 
-    if (timer_elapsed32(battery_timer) > 2000 && IS_WIRELESS_TRANSPORT(transport_get()) == true && wireless_get() == WT_STATE_CONNECTED)     // 1分钟
+    if (timer_elapsed32(battery_timer) > 2000)     // 1分钟
     {
         battery_timer = 0;
         battery_read_and_update_data();
@@ -111,5 +111,8 @@ void battery_reset_timer(void)
     battery_timer = 0;
 }
 
-
+uint8_t battery_get(void)
+{
+    return battery_percent;
+}
 

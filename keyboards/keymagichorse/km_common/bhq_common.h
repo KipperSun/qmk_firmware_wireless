@@ -68,6 +68,7 @@
 #    define USB_POWER_CONNECTED_LEVEL 1    
 #endif
 
+void bhq_set_lowbat_led(bool on);
 
 void bhq_common_init(void);
 bool usb_power_connected(void);
