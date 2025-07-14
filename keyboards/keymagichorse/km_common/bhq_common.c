@@ -213,7 +213,7 @@ void bhq_battery_task(void)
 {
     static uint32_t battery_low_led_flicker_time = 0;
     static uint8_t led_sta = 0;
-    if(battery_get() > 50)
+    if(battery_get() > 5)
     {
         battery_low_led_flicker_time = 0;
         bluetooth_enable();
