@@ -85,10 +85,6 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                     // 重新打开非配对蓝牙广播。如已开启蓝牙广播或已连接，那么不会断开当前的蓝牙连接。
                     bhq_AnewOpenBleAdvertising(transport_get() - KB_TRANSPORT_BLUETOOTH_1, 30);
                 }
-            }   
-            else if(IS_RF_TRANSPORT(transport_get()) == true)
-            {
-                bhq_switch_rf_easy_kb();
             }
         }
     }

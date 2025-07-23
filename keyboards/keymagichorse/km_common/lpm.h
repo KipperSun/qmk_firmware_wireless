@@ -18,7 +18,7 @@
 #pragma once
 #include "quantum.h"
 #ifndef RUN_MODE_PROCESS_TIME
-#    define RUN_MODE_PROCESS_TIME 10000
+#    define RUN_MODE_PROCESS_TIME (1000 * 10)
 #endif
 
 
