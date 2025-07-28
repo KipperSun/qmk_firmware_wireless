@@ -1,6 +1,3 @@
-MAKEFLAGS= -j 10
-
-
 
 # 74HC595
 ifeq ($(strip $(SHIFT595_ENABLED)), yes)
@@ -16,28 +13,23 @@ ifeq ($(strip $(KM_DEBUG)), yes)
 	VPATH += keyboards/keymagichorse/km_common/rtt
 endif   
 
-# 提前导入mcu的mk
-include $(wildcard $(PLATFORM_PATH)/*/mcu_selection.mk)
-$(info !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MCU_SERIES = $(MCU_SERIES))
-$(info !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MCU_LDSCRIPT = $(MCU_LDSCRIPT))
-
-
-
-
 VPATH += keyboards/keymagichorse/km_common/
 
-ifeq ($(strip $(KB_LPM_ENABLED)), yes)
-    ifneq ($(filter $(MCU_SERIES),STM32F4xx),)
+ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
+    # 低功耗
+    ifeq ($(strip $(KB_LPM_ENABLED)), yes)
         OPT_DEFS += -DKB_LPM_ENABLED
-        SRC += km_common/lpm_stm32f4.c
+        SRC += km_common/${KB_LPM_DRIVER}.c
     endif
-    ifneq ($(filter $(MCU_SERIES),STM32F1xx),)
-        OPT_DEFS += -DKB_LPM_ENABLED
-        SRC += km_common/lpm_stm32f1.c
-    endif
-endif
 
-SRC += km_common/battery.c
-SRC += km_common/bhq_common.c
-SRC += km_common/transport.c
-SRC += km_common/wireless.c
+    ifeq ($(strip $(KB_CHECK_BATTERY_ENABLED)), yes)
+        # 打开QMK的ADC读取功能
+        ANALOG_DRIVER_REQUIRED = yes
+        SRC += km_common/battery.c
+    endif
+
+    SRC += km_common/bhq_common.c
+    SRC += km_common/transport.c
+    SRC += km_common/wireless.c
+
+endif
