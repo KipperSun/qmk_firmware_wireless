@@ -140,7 +140,7 @@ void BHQ_Protocol_Process_user(uint8_t *dat, uint16_t length)
         case 0x27:  // RAW数据
             raw_hid_receive(&dat[5],dat[4]);  
             break;
-        case 0x96:  // 复位模块 ack
+        case 0x95:  // 复位模块 ack
         case 0x97:  // 设置参数 ack
         case 0x92:  // 读取模块信息 ack
         case 0xB1:  // ota ack
