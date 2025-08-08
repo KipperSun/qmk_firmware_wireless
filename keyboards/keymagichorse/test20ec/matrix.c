@@ -22,37 +22,42 @@
 #include "analog.h"
 #include "km_printf.h"
 #include "timer.h"
+#include "ec_filter.h"
+#include "util.h"
 
 #define ECOUT_ADC_PIN   A1
 #define DISCHARGE_PIN   A3
 
-#define MUX1_EN     C13
-#define MUX_SET0    C14
-#define MUX_SET1    C15
-#define MUX_SET2    A0
+#define MUX1_EN     B4
+#define MUX2_EN     B5
+#define MUX_SET0    C13
+#define MUX_SET1    C14
+#define MUX_SET2    C15
+#define MUX_SET3    A0
 
 uint32_t matrix_debug_timer = 0;
 // A1   ECOUT_ADC  
 // A3   DISCHARGE_PIN
-// C13  MUX1_EN
-// C14  MUX_SET0
-// C15  MUX_SET1
-// A0   MUX_SET2
-#define MUX_SEL_PINS {C14, C15, A0}
+// B4  MUX1_EN
+// B5  MUX2_EN
+// C13  MUX_SET0
+// C14  MUX_SET1
+// C15  MUX_SET2
+// A0   MUX_SET3
+#define MUX_SEL_PINS {C13, C14, C15, A0}
 
+
+ec_filter_RingBuffer ec_adc_buffs[MATRIX_ROWS][MATRIX_COLS];
 
 
 #ifdef MATRIX_ROW_PINS
 static const pin_t row_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
-#endif // MATRIX_ROW_PINS
-// #ifdef MATRIX_COL_PINS
-// static const pin_t col_pins[MATRIX_COLS] = MATRIX_COL_PINS;
-// #endif // MATRIX_COL_PINS
+#endif 
 
 uint16_t key_adcs[MATRIX_ROWS][MATRIX_COLS] = {0};
 
-static const pin_t mux_sel_pins[3] = MUX_SEL_PINS;
-
+static const pin_t mux_sel_pins[4] = MUX_SEL_PINS;
+static const pin_t mux_en_pins[2] = {MUX1_EN, MUX2_EN};
 
 
 // 放电
@@ -70,32 +75,69 @@ static inline void charge_capacitor(uint8_t row) {
 static inline void clear_row_pin(uint8_t row) {
     writePinLow(row_pins[row]);
 }
-#define MUX_CH0 0  // S2=0, S1=0, S0=0
-#define MUX_CH1 1  // S2=0, S1=0, S0=1
-#define MUX_CH2 2  // S2=0, S1=1, S0=0
-#define MUX_CH3 3  // S2=0, S1=1, S0=1
-#define MUX_CH4 4  // S2=1, S1=0, S0=0
-#define MUX_CH5 5  // S2=1, S1=0, S0=1
-#define MUX_CH6 6  // S2=1, S1=1, S0=0
-#define MUX_CH7 7  // S2=1, S1=1, S0=1
 
-static const uint8_t col_channels[MATRIX_COLS] = {MUX_CH3, MUX_CH0, MUX_CH1, MUX_CH2, MUX_CH6};
-// 选择mux
-static inline void select_mux(uint8_t col) {
-    uint8_t ch = col_channels[col];
-    writePin(mux_sel_pins[0], ch & 1);
-    writePin(mux_sel_pins[1], ch & 2);
-    writePin(mux_sel_pins[2], ch & 4);
+// [ MUX 编号 (bits 7–4) ] [ 通道编号 (bits 3–0) ]
+#define MUX_EC_KEYMAP(mux_index, channel) (((mux_index) << 4) | ((channel) & 0x0F))
+
+// 提取 MUX 编号（高 4 位）
+#define MUX_EC_GET_MUX(addr)       (uint8_t)(((addr) >> 4) & 0x0F)
+
+// 提取通道编号（低 4 位）
+#define MUX_EC_GET_CH(addr)        (uint8_t)((addr) & 0x0F)
+
+// 每个矩阵都连了一个mux
+static const uint8_t matrix_mux_channels[MATRIX_ROWS][MATRIX_COLS] = {
+    {MUX_EC_KEYMAP(0,1), MUX_EC_KEYMAP(0,2), MUX_EC_KEYMAP(0,4), MUX_EC_KEYMAP(0,6),  MUX_EC_KEYMAP(0,7)},
+    {MUX_EC_KEYMAP(0,0), MUX_EC_KEYMAP(0,3), MUX_EC_KEYMAP(0,5), MUX_EC_KEYMAP(1,15), MUX_EC_KEYMAP(1,14)},
+    {MUX_EC_KEYMAP(1,1), MUX_EC_KEYMAP(1,3), MUX_EC_KEYMAP(1,9), MUX_EC_KEYMAP(1,11), MUX_EC_KEYMAP(1,13)},
+    {MUX_EC_KEYMAP(1,0), MUX_EC_KEYMAP(1,2), MUX_EC_KEYMAP(1,8), MUX_EC_KEYMAP(1,10), MUX_EC_KEYMAP(1,12)}
+};
+
+
+// 选择mux的通道号
+static inline void select_mux_ch(uint8_t row, uint8_t col)
+{
+    uint8_t ch = MUX_EC_GET_CH(matrix_mux_channels[row][col]);
+    writePin(mux_sel_pins[0], (ch >> 0) & 1);  // S0
+    writePin(mux_sel_pins[1], (ch >> 1) & 1);  // S1
+    writePin(mux_sel_pins[2], (ch >> 2) & 1);  // S2
+    writePin(mux_sel_pins[3], (ch >> 3) & 1);  // S3
 }
+// 使能引脚
+static inline void select_mux_en(uint8_t row, uint8_t col)
+{
+    uint8_t mux_en_pin_i = MUX_EC_GET_MUX(matrix_mux_channels[row][col]);
+
+    // 关闭所有
+    writePinHigh(mux_en_pins[1]);   
+    writePinHigh(mux_en_pins[0]);  
+    // 打开一个
+    writePinLow(mux_en_pins[mux_en_pin_i]);   // 使能一个
+}
+static inline void select_mux_diAll(void)
+{
+    // 关闭所有
+    writePinHigh(mux_en_pins[1]);   
+    writePinHigh(mux_en_pins[0]);  
+}
+
+
+
+
 
 // 读取电容值
 static uint16_t ecsm_readkey_raw(uint8_t row, uint8_t col) {
-    uint16_t sw_value = 0;
 
+    uint16_t sw_value = 0;
     charge_capacitor(row); // 拉高这一行, 给这一行的电容充电
     // 理论上这里要等下等待充电完成
     wait_us(5);
-    sw_value = analogReadPin(ECOUT_ADC_PIN); // 获取ADC的读数
+
+// 获取滤波后ad值
+    ec_filter_alpha_beta(&ec_adc_buffs[row][col],analogReadPin(ECOUT_ADC_PIN));
+    sw_value = ec_filter_get_avg_value(&ec_adc_buffs[row][col]);
+    // sw_value = analogReadPin(ECOUT_ADC_PIN);
+// 获取滤波后ad值
 
     discharge_capacitor();
     clear_row_pin(row);
@@ -114,13 +156,15 @@ static bool ecsm_matrix_scan(matrix_row_t current_matrix[]) {
     bool updated = false;
     discharge_capacitor();
     wait_us(20);
-    for (int col = 0; col < MATRIX_COLS; col++) {
-        select_mux(col);
-        writePinLow(MUX1_EN);
-        for (int row = 0; row < MATRIX_ROWS; row++) {
+     for (int row = 0; row < MATRIX_ROWS; row++) {
+        for (int col = 0; col < MATRIX_COLS; col++) {
+            // 先选择通道，再打开en
+            select_mux_ch(row, col);
+            select_mux_en(row, col);
+            wait_us(5);
             key_adcs[row][col] = ecsm_readkey_raw(row, col);
-        }
-        writePinHigh(MUX1_EN);
+        }   
+        select_mux_diAll();
     }
     return updated;
 
@@ -147,8 +191,13 @@ void matrix_init_custom(void) {
     setPinOutput(DISCHARGE_PIN);
     writePinLow(DISCHARGE_PIN);
 
-    setPinOutput(MUX1_EN);
-    writePinLow(MUX1_EN);
+    setPinOutput(mux_en_pins[0]);
+    writePinLow(mux_en_pins[0]);
+
+    setPinOutput(mux_en_pins[1]);
+    writePinLow(mux_en_pins[1]);
+
+
 
     setPinOutput(mux_sel_pins[0]);
     writePinLow(mux_sel_pins[0]);
@@ -159,6 +208,9 @@ void matrix_init_custom(void) {
     setPinOutput(mux_sel_pins[2]);
     writePinLow(mux_sel_pins[2]);
 
+    setPinOutput(mux_sel_pins[3]);
+    writePinLow(mux_sel_pins[3]);
+
 
     // writePinHigh(mux_sel_pins[0]);
     // writePinLow(mux_sel_pins[1]);
@@ -167,6 +219,14 @@ void matrix_init_custom(void) {
 
     analogReadPin(ECOUT_ADC_PIN);   
     matrix_debug_timer = timer_read32(); 
+
+    for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
+        for (uint8_t c = 0; c < MATRIX_COLS; c++)
+        {
+            ec_filter_initqueue(&ec_adc_buffs[r][c]);
+        }
+    }
+
 }
 
 
