@@ -23,14 +23,14 @@
 /*******************************************************matrix********************************************************/
 /* key matrix size */
 #define MATRIX_ROWS 5
-#define MATRIX_COLS 14
+#define MATRIX_COLS 16  // 做两列假灯
 /* COL2ROW or ROW2COL */
 #define DIODE_DIRECTION ROW2COL
 
 /* key matrix pins */
 #define MATRIX_ROW_PINS { A15, B3, B4, B5, B6 }
                         //  Q7      Q6      Q5     Q4
-#define MATRIX_COL_PINS { NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN}
+#define MATRIX_COL_PINS { NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN, NO_PIN}
 // 列 接到 74HC595 的哪个 Qx
 #define COL_TO_74HC595_PINS  {_1_595_Q1, _1_595_Q2, _1_595_Q3, _1_595_Q4, _1_595_Q5, _1_595_Q6, _1_595_Q7, _1_595_Q0, _2_595_Q7, _2_595_Q6, _2_595_Q5, _2_595_Q4, _2_595_Q2, _2_595_Q3}
 // 定义列映射到 74HC595 的管脚数量
@@ -72,9 +72,3 @@
 
 #define WS2812_POWER_PIN    B0
 #define WS2812_BYTE_ORDER   WS2812_BYTE_ORDER_GRB
-
-#define RGBLIGHT_LIMIT_VAL 140
-// #define RGBLIGHT_LAYERS
-#define RGBLIGHT_LAYER_BLINK
-// #define RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF
-// #define RGBLIGHT_LAYERS_RETAIN_VAL
