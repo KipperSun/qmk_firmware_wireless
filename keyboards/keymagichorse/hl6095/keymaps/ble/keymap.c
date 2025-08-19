@@ -60,11 +60,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 #if defined(RGBLIGHT_ENABLE) 
 //  每个通道的颜色 以及大写按键的颜色
-const rgblight_segment_t PROGMEM bt_conn1[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_BLUE} );         // 通道1：天青色
-const rgblight_segment_t PROGMEM bt_conn2[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_TURQUOISE} );   // 通道2：春绿色
-const rgblight_segment_t PROGMEM bt_conn3[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_ORANGE} );        // 通道3：紫色
-const rgblight_segment_t PROGMEM caps_lock_[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_PURPLE} );       // 大小写：白色
-const rgblight_segment_t PROGMEM bat_low_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_RED} );       // 低电量：红
+const rgblight_segment_t PROGMEM bt_conn1[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_BLUE} );      // 通道1：蓝色
+const rgblight_segment_t PROGMEM bt_conn2[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_TURQUOISE} ); // 通道2：蓝绿色（青绿）
+const rgblight_segment_t PROGMEM bt_conn3[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_ORANGE} );    // 通道3：橙色
+const rgblight_segment_t PROGMEM caps_lock_[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_PURPLE} );    // 大小写：紫色
+const rgblight_segment_t PROGMEM bat_low_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_RED} );      // 低电量：红色
 
 const rgblight_segment_t* const PROGMEM _rgb_layers[] = RGBLIGHT_LAYERS_LIST( 
     bt_conn1, bt_conn2, bt_conn3, caps_lock_, bat_low_led

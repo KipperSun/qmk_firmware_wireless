@@ -16,14 +16,18 @@
 #include QMK_KEYBOARD_H
 #include "config.h"
 
-#if defined(RGBLIGHT_WS2812)
-#    include "ws2812.h"
-#endif
+#include "ws2812.h"
+#include "color.h"
 
 #include "bhq_common.h"
 #include "wireless.h"
 #include "transport.h"
 #include "report_buffer.h"
+
+#   if defined(KB_LPM_ENABLED)
+// 临时变量，用于临时存放矩阵灯是否开启
+uint8_t rgb_matrix_is_enabled_temp_v = 0;
+#endif
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT(
@@ -35,8 +39,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [1] = LAYOUT(
     KC_GRV , KC_F1,   KC_F2,   KC_F3,    KC_F4,   KC_F5,   KC_F6,   KC_F7,    KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_TRNS, KC_DEL,
     KC_TRNS, BL_SW_0, BL_SW_1, BL_SW_2,  RF_TOG, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, USB_TOG, NK_TOGG, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_BRIU, KC_TRNS,
+    KC_TRNS, USB_TOG, NK_TOGG, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  RM_TOGG, RM_NEXT, RM_PREV, KC_TRNS, KC_TRNS, KC_BRIU, KC_TRNS,
     KC_TRNS, GU_TOGG, KC_TRNS, KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, KC_TRNS, KC_VOLD, KC_BRID, KC_VOLU),
   [2] = LAYOUT(
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
@@ -57,46 +61,151 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     return process_record_bhq(keycode, record);
 }
 
+//  每个通道的颜色 以及大写按键的颜色
+// HSV_BLUE        // 蓝牙 蓝色
+// HSV_PURPLE      // 大小写：紫色
+// HSV_RED         // 低电量：红色
+typedef struct {
+    uint8_t index;       // LED 索引
+    uint16_t blink_nums;      // 剩余闪烁次数（0 = 不闪）
+    uint16_t on_time;    // 亮的时长 (ms)
+    uint16_t off_time;   // 灭的时长 (ms)
 
-#if defined(RGBLIGHT_ENABLE) 
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
 
+    // 内部状态
+    uint8_t active;      // 是否激活
+    uint8_t is_on;       // 当前亮灭状态
+    uint16_t counter;    // 当前阶段计数器
+} user_blink_task_t;
 
-void bhq_set_lowbat_led(bool on)
+#define MAX_BLINK_TASKS 8   // 最多同时 8 个闪烁任务
+static user_blink_task_t blink_tasks[MAX_BLINK_TASKS];
+void add_blink_task(int index, uint8_t red, uint8_t green, uint8_t blue, uint16_t blink_nums, uint16_t on_ms, uint16_t off_ms) {
+    if(blink_nums == 0)
+    {
+        blink_nums = blink_nums;
+    }
+    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
+        if (!blink_tasks[i].active) {
+            blink_tasks[i].index        = index;
+            blink_tasks[i].blink_nums   = blink_nums;
+            blink_tasks[i].on_time      = on_ms;
+            blink_tasks[i].off_time     = off_ms;
+            blink_tasks[i].red          = red;
+            blink_tasks[i].green        = green;
+            blink_tasks[i].blue         = blue;
+            blink_tasks[i].active       = 1;
+            blink_tasks[i].is_on        = 1;
+            blink_tasks[i].counter      = 0;
+            break;
+        }
+    }
+}
+void del_all_blink_task(void)
 {
+    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
+            blink_tasks[i].index        = 0;
+            blink_tasks[i].blink_nums   = 0;
+            blink_tasks[i].on_time      = 0;
+            blink_tasks[i].off_time     = 0;
+            blink_tasks[i].red          = 0;
+            blink_tasks[i].green        = 0;
+            blink_tasks[i].blue         = 0;
+            blink_tasks[i].active       = 0;
+            blink_tasks[i].is_on        = 0;
+            blink_tasks[i].counter      = 0;
+    }
 }
 
-bool led_update_user(led_t led_state) {
+// 矩阵灯任务
+bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+
     // 如果当前是USB连接，或者是蓝牙/2.4G连接且已配对连接状态
     if( (transport_get() > KB_TRANSPORT_USB && wireless_get() == WT_STATE_CONNECTED) || ( usb_power_connected() == true && transport_get() == KB_TRANSPORT_USB))
     {
-        km_printf("led_update_user\r\n");
+        // 两个大写灯
+        if (host_keyboard_led_state().caps_lock) {
+            // 两个大写灯
+            rgb_matrix_set_color(30, RGB_PURPLE); 
+            rgb_matrix_set_color(31, RGB_PURPLE);
+
+            // QWE
+            // rgb_matrix_set_color(17, 255, 255, 255);
+            // rgb_matrix_set_color(18, 255, 255, 255);
+            // rgb_matrix_set_color(19, 255, 255, 255);
+        }
     }
-    return true;
+
+    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
+        if (!blink_tasks[i].active) continue;
+        // 时间推进
+        blink_tasks[i].counter++;
+        if (blink_tasks[i].is_on) {
+            if (blink_tasks[i].counter >= blink_tasks[i].on_time) {
+                blink_tasks[i].is_on = 0;
+                blink_tasks[i].counter = 0;
+                if (blink_tasks[i].blink_nums > 0 && --blink_tasks[i].blink_nums == 0) {
+                    blink_tasks[i].active = 0;
+                }
+            }
+        } else {
+            if (blink_tasks[i].counter >= blink_tasks[i].off_time) {
+                blink_tasks[i].is_on = 1;
+                blink_tasks[i].counter = 0;
+            }
+        }
+        if (blink_tasks[i].active && blink_tasks[i].is_on) {
+            rgb_matrix_set_color(blink_tasks[i].index, blink_tasks[i].red, blink_tasks[i].green, blink_tasks[i].blue); 
+        } else {
+            rgb_matrix_set_color(blink_tasks[i].index, 0, 0, 0);  
+        }
+    }
+
+    return false;
 }
 
 // 无线蓝牙回调函数
 void wireless_ble_hanlde_kb(uint8_t host_index,uint8_t advertSta,uint8_t connectSta,uint8_t pairingSta)
 {
     km_printf("wireless_ble_hanlde_kb->host_index: %d\r\n",host_index);
+    del_all_blink_task();
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙配对模式
     if(connectSta != 1 && advertSta == 1 && pairingSta == 1)
     {
         // 这里第一个参数使用host_index正好对应_rgb_layers的索引
+        add_blink_task(17 + host_index, RGB_BLUE, 0, 100, 100);
         km_printf("if 1\n");
     }
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙非配对模式
     else if(connectSta != 1 && advertSta == 1 && pairingSta == 0)
     {
+        add_blink_task(17 + host_index, RGB_BLUE, 0, 200, 300);
         km_printf("if 2\n");
+    }
+    else if(connectSta != 1 && advertSta == 0 && pairingSta == 0)
+    {
+        del_all_blink_task();
+        km_printf("if 3\n");
     }
     // 蓝牙已连接
     if(connectSta == 1)
     {
         report_buffer_clear();
         layer_clear();
-        km_printf("if 3\n");
+        add_blink_task(17 + host_index, RGB_BLUE, 5, 50, 50);
+        km_printf("if 4\n");
     }
 }
+void bhq_set_lowbat_led(bool on)
+{
+
+}
+
+
+
 void wireless_rf24g_hanlde_kb(uint8_t connectSta,uint8_t pairingSta)
 {
     if(connectSta == 1)
@@ -106,31 +215,55 @@ void wireless_rf24g_hanlde_kb(uint8_t connectSta,uint8_t pairingSta)
         km_printf("if 3\n");
     }
 }
-#endif
 
 // After initializing the peripheral
 void keyboard_post_init_kb(void)
 {
-    ws2812_init();
     gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
     gpio_write_pin_high(WS2812_POWER_PIN);
     // rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_REACTIVE_WIDE);
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_MULTISPLASH);
+    // rgb_matrix_mode_noeeprom(RGB_MATRIX_MULTISPLASH);    // 这两个测试xy用，挺好
+    // rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_SPIRAL);
+    rgb_matrix_is_enabled_temp_v = rgb_matrix_is_enabled();
+
+}
+__attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
+    return via_command_bhq(data, length);
 }
 
 #   if defined(KB_LPM_ENABLED)
+uint8_t is_sleep = 0;
 // 低功耗外围设备电源控制
 void lpm_device_power_open(void) 
 {
-    // ws2812电源开启
-    ws2812_init();
-    gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
+    gpio_set_pin_output(WS2812_POWER_PIN);
     gpio_write_pin_high(WS2812_POWER_PIN);
-
+    if(is_sleep == 1)
+    {
+        is_sleep = 0;
+        ws2812_init();
+        if(rgb_matrix_is_enabled_temp_v)
+        {
+            rgb_matrix_enable();    // 重新打开rgb矩阵灯
+        }
+        rgb_matrix_set_suspend_state(false);
+    }
 }
+
 //关闭外围设备电源
 void lpm_device_power_close(void) 
 {
+    is_sleep = 1;
+    // 低功耗前 获取矩阵灯的状态
+    rgb_matrix_is_enabled_temp_v = rgb_matrix_is_enabled();
+    // 软关灯
+    if(rgb_matrix_is_enabled_temp_v == 0)
+    {
+        // 软关灯，且不写入eeprom
+        rgb_matrix_disable_noeeprom();  
+    }
+    rgb_matrix_set_suspend_state(true);
+    // 关闭电源
     // ws2812电源关闭
     gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
     gpio_write_pin_low(WS2812_POWER_PIN);
@@ -140,10 +273,6 @@ void lpm_device_power_close(void)
 }
 
 
-
-__attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
-    return via_command_bhq(data, length);
-}
 
 
 
@@ -171,7 +300,7 @@ void lpm_set_unused_pins_to_input_analog(void)
     palSetLineMode(A4, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A5, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A6, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(A7, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A7, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A8, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A9, PAL_MODE_INPUT_ANALOG); 
     // palSetLineMode(A10, PAL_MODE_INPUT_ANALOG); 
