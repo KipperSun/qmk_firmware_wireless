@@ -224,8 +224,9 @@ void enter_low_power_mode_prepare(void)
     lpm_timer_reset();
     report_buffer_init();
     bhq_init();     // uart_init
-    
+#if defined (MOUSEKEY_ENABLE)
     mousekey_clear();
+#endif
     // clear_keyboard();
     // layer_clear();
 # if defined(KB_CHECK_BATTERY_ENABLED)
