@@ -26,6 +26,10 @@
 #include "uart.h"
 #include "bhq_common.h"
 
+# if defined(KB_CHECK_BATTERY_ENABLED)
+#   include "battery.h"
+#endif
+
 #if SHIFT595_ENABLED
 #   include "74hc595.h"
 #endif
@@ -122,7 +126,9 @@ void enter_low_power_mode_prepare(void)
 #if SHIFT595_ENABLED
     shift595_pin_sleep();
 #endif
-
+# if defined(KB_CHECK_BATTERY_ENABLED)
+    battery_stop();
+#endif
 
     uint8_t i = 0;
 #if (DIODE_DIRECTION == COL2ROW)
@@ -222,7 +228,9 @@ void enter_low_power_mode_prepare(void)
     mousekey_clear();
     // clear_keyboard();
     // layer_clear();
-
+# if defined(KB_CHECK_BATTERY_ENABLED)
+    battery_start();
+#endif
     lpm_device_power_open();    // 外围设备 电源 关闭
   
     gpio_write_pin_high(BHQ_INT_PIN);

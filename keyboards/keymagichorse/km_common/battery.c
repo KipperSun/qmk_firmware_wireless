@@ -107,8 +107,6 @@ void battery_percent_read_task(void)
     if (battery_timer == 0) {
         battery_timer = timer_read32();
         battery_read_and_update_data();
-        wait_us(5000);          
-        battery_read_and_update_data();
     }
 
     // 定时任务，2秒执行一次
@@ -139,5 +137,5 @@ void battery_start(void)
 
 void battery_init(void)
 {
-    battery_reset_timer();
+    // battery_reset_timer();
 }
