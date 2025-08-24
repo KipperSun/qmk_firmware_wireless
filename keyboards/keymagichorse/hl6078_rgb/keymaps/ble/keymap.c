@@ -23,11 +23,20 @@
 #include "wireless.h"
 #include "transport.h"
 #include "report_buffer.h"
+#include "battery.h"
 
 #   if defined(KB_LPM_ENABLED)
 // 临时变量，用于临时存放矩阵灯是否开启
+uint8_t is_sleep = 0;
 uint8_t rgb_matrix_is_enabled_temp_v = 0;
 #endif
+
+// 是否显示rgb电量指示灯
+uint8_t rgb_bat_show_flag  = 0;
+uint16_t rgb_bat_led_idx[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+#define RGB_BAT      QK_USER_1       
+// 低电量提示
+uint8_t rgb_bat_low_flag = 0;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT(
@@ -41,7 +50,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_TRNS, BL_SW_0, BL_SW_1, BL_SW_2,  RF_TOG, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, USB_TOG, NK_TOGG, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  RM_TOGG, RM_NEXT, RM_PREV, KC_TRNS, KC_TRNS, KC_BRIU, KC_TRNS,
-    KC_TRNS, GU_TOGG, KC_TRNS, KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, KC_TRNS, KC_VOLD, KC_BRID, KC_VOLU),
+    KC_TRNS, GU_TOGG, KC_TRNS, KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, RGB_BAT, KC_VOLD, KC_BRID, KC_VOLU),
   [2] = LAYOUT(
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
@@ -58,6 +67,17 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if(keycode == RGB_BAT)
+    {
+        if(record->event.pressed)
+        {
+            rgb_bat_show_flag  = 1;
+        }
+        else
+        {
+            rgb_bat_show_flag  = 0;
+        }
+    }
     return process_record_bhq(keycode, record);
 }
 
@@ -81,7 +101,7 @@ typedef struct {
     uint16_t counter;    // 当前阶段计数器
 } user_blink_task_t;
 
-#define MAX_BLINK_TASKS 8   // 最多同时 8 个闪烁任务
+#define MAX_BLINK_TASKS 2   // 最多同时 2 个闪烁任务
 static user_blink_task_t blink_tasks[MAX_BLINK_TASKS];
 void add_blink_task(int index, uint8_t red, uint8_t green, uint8_t blue, uint16_t blink_nums, uint16_t on_ms, uint16_t off_ms) {
     if(blink_nums == 0)
@@ -107,21 +127,43 @@ void add_blink_task(int index, uint8_t red, uint8_t green, uint8_t blue, uint16_
 void del_all_blink_task(void)
 {
     for (int i = 0; i < MAX_BLINK_TASKS; i++) {
-            blink_tasks[i].index        = 0;
-            blink_tasks[i].blink_nums   = 0;
-            blink_tasks[i].on_time      = 0;
-            blink_tasks[i].off_time     = 0;
-            blink_tasks[i].red          = 0;
-            blink_tasks[i].green        = 0;
-            blink_tasks[i].blue         = 0;
-            blink_tasks[i].active       = 0;
-            blink_tasks[i].is_on        = 0;
-            blink_tasks[i].counter      = 0;
+        blink_tasks[i].index        = 0;
+        blink_tasks[i].blink_nums   = 0;
+        blink_tasks[i].on_time      = 0;
+        blink_tasks[i].off_time     = 0;
+        blink_tasks[i].red          = 0;
+        blink_tasks[i].green        = 0;
+        blink_tasks[i].blue         = 0;
+        blink_tasks[i].active       = 0;
+        blink_tasks[i].is_on        = 0;
+        blink_tasks[i].counter      = 0;
     }
 }
 
 // 矩阵灯任务
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+// **************************** 低电量闪烁逻辑 ****************************
+    if (rgb_bat_low_flag == 1) {
+        static uint16_t last_toggle = 0;   // 上次切换时间
+        static bool led_on = false;        // 当前红灯状态
+
+        // 每500ms切换一次状态
+        if (timer_elapsed(last_toggle) > 500) {
+            led_on = !led_on;              // 状态取反
+            last_toggle = timer_read();    // 更新时间戳
+        }
+
+        // 根据 led_on 状态设置颜色
+        for (size_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+            if (led_on) {
+                rgb_matrix_set_color(i, RGB_RED); 
+            } else {
+                rgb_matrix_set_color(i, RGB_BLACK);      
+            }
+        }
+        return false;  
+    }
+// **************************** 低电量闪烁逻辑 ****************************
 
     // 如果当前是USB连接，或者是蓝牙/2.4G连接且已配对连接状态
     if( (transport_get() > KB_TRANSPORT_USB && wireless_get() == WT_STATE_CONNECTED) || ( usb_power_connected() == true && transport_get() == KB_TRANSPORT_USB))
@@ -137,8 +179,40 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             // rgb_matrix_set_color(18, 255, 255, 255);
             // rgb_matrix_set_color(19, 255, 255, 255);
         }
+    }  
+// ************** 电量百分比 亮灯逻辑 **************
+    if(rgb_bat_show_flag  == 1)   
+    {
+        for (size_t i = 0; i < RGB_MATRIX_LED_COUNT; i++)
+        {
+            rgb_matrix_set_color(i, RGB_BLACK);
+        }
+        uint8_t bat_led_count = battery_get() / 10;
+        if (battery_get() > 0 && bat_led_count == 0) {
+            bat_led_count = 1;  
+        }
+        if (bat_led_count > 10) {
+            bat_led_count = 10; 
+        }
+        uint8_t r = 0, g = 0, b = 0;
+        if (battery_get() < 30) {
+            r = 0xFF; g = 0x00; b = 0x00;   // 红色（低电量）
+        } else if (battery_get() < 70) {
+            r = 0xFF; g = 0xFF; b = 0x00;   // 黄色（中电量）
+        } else {
+            r = 0x00; g = 0xFF; b = 0x00;   // 绿色（高电量）
+        }
+        for (size_t j = 0; j < bat_led_count; j++) {
+            uint8_t led_index = rgb_bat_led_idx[j];
+            if (led_index < RGB_MATRIX_LED_COUNT) {
+                rgb_matrix_set_color(led_index, r, g, b);
+            }
+        }
+        return false;   
     }
+// ************** 电量百分比 亮灯逻辑 **************
 
+// ************** 闪烁rgb灯逻辑 **************
     for (int i = 0; i < MAX_BLINK_TASKS; i++) {
         if (!blink_tasks[i].active) continue;
         // 时间推进
@@ -163,7 +237,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             rgb_matrix_set_color(blink_tasks[i].index, 0, 0, 0);  
         }
     }
-
+// ************** 闪烁rgb灯逻辑 **************
     return false;
 }
 
@@ -201,7 +275,7 @@ void wireless_ble_hanlde_kb(uint8_t host_index,uint8_t advertSta,uint8_t connect
 }
 void bhq_set_lowbat_led(bool on)
 {
-
+    rgb_bat_low_flag = on;
 }
 
 
@@ -232,7 +306,6 @@ __attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
 }
 
 #   if defined(KB_LPM_ENABLED)
-uint8_t is_sleep = 0;
 // 低功耗外围设备电源控制
 void lpm_device_power_open(void) 
 {
@@ -293,10 +366,10 @@ void lpm_set_unused_pins_to_input_analog(void)
     palSetLineMode(A13, PAL_MODE_INPUT_ANALOG);
     palSetLineMode(A14, PAL_MODE_INPUT_ANALOG);
 
-    palSetLineMode(A0, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(A1, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(A2, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(A3, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A0, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A1, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A2, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A3, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A4, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A5, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A6, PAL_MODE_INPUT_ANALOG); 
@@ -307,18 +380,18 @@ void lpm_set_unused_pins_to_input_analog(void)
     palSetLineMode(A11, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A13, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A14, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(A15, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A15, PAL_MODE_INPUT_ANALOG); 
 
-    palSetLineMode(B0, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B1, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B0, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B1, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(B2, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B3, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B4, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B5, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B6, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B7, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B8, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(B9, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B3, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B4, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B5, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B6, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B7, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B8, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(B9, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(B10, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(B11, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(B13, PAL_MODE_INPUT_ANALOG); 
