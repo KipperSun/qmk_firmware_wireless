@@ -26,10 +26,11 @@
 #include "battery.h"
 
 #   if defined(KB_LPM_ENABLED)
+
+#endif
 // 临时变量，用于临时存放矩阵灯是否开启
 uint8_t is_sleep = 0;
 uint8_t rgb_matrix_is_enabled_temp_v = 0;
-#endif
 
 // 是否显示rgb电量指示灯
 uint8_t rgb_bat_show_flag  = 0;
@@ -180,6 +181,35 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             // rgb_matrix_set_color(19, 255, 255, 255);
         }
     }  
+
+// ************** 闪烁rgb灯逻辑 **************
+    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
+        if (!blink_tasks[i].active) continue;
+        // 时间推进
+        blink_tasks[i].counter++;
+        if (blink_tasks[i].is_on) {
+            if (blink_tasks[i].counter >= blink_tasks[i].on_time) {
+                blink_tasks[i].is_on = 0;
+                blink_tasks[i].counter = 0;
+                if (blink_tasks[i].blink_nums > 0 && --blink_tasks[i].blink_nums == 0) {
+                    blink_tasks[i].active = 0;
+                }
+            }
+        } else {
+            if (blink_tasks[i].counter >= blink_tasks[i].off_time) {
+                blink_tasks[i].is_on = 1;
+                blink_tasks[i].counter = 0;
+            }
+        }
+        if (blink_tasks[i].active && blink_tasks[i].is_on) {
+            rgb_matrix_set_color(blink_tasks[i].index, blink_tasks[i].red, blink_tasks[i].green, blink_tasks[i].blue); 
+        } else {
+            rgb_matrix_set_color(blink_tasks[i].index, 0, 0, 0);  
+        }
+    }
+// ************** 闪烁rgb灯逻辑 **************
+
+
 // ************** 电量百分比 亮灯逻辑 **************
     if(rgb_bat_show_flag  == 1)   
     {
@@ -211,33 +241,6 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         return false;   
     }
 // ************** 电量百分比 亮灯逻辑 **************
-
-// ************** 闪烁rgb灯逻辑 **************
-    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
-        if (!blink_tasks[i].active) continue;
-        // 时间推进
-        blink_tasks[i].counter++;
-        if (blink_tasks[i].is_on) {
-            if (blink_tasks[i].counter >= blink_tasks[i].on_time) {
-                blink_tasks[i].is_on = 0;
-                blink_tasks[i].counter = 0;
-                if (blink_tasks[i].blink_nums > 0 && --blink_tasks[i].blink_nums == 0) {
-                    blink_tasks[i].active = 0;
-                }
-            }
-        } else {
-            if (blink_tasks[i].counter >= blink_tasks[i].off_time) {
-                blink_tasks[i].is_on = 1;
-                blink_tasks[i].counter = 0;
-            }
-        }
-        if (blink_tasks[i].active && blink_tasks[i].is_on) {
-            rgb_matrix_set_color(blink_tasks[i].index, blink_tasks[i].red, blink_tasks[i].green, blink_tasks[i].blue); 
-        } else {
-            rgb_matrix_set_color(blink_tasks[i].index, 0, 0, 0);  
-        }
-    }
-// ************** 闪烁rgb灯逻辑 **************
     return false;
 }
 

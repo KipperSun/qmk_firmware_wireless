@@ -24,13 +24,16 @@
 #include "battery.h"
 #include "outputselect.h"
 #include "usb_main.h"
-#include "battery.h"
+
+# if defined(KB_CHECK_BATTERY_ENABLED)
+#   include "battery.h"
+#endif
+
 # if defined(KB_LPM_ENABLED)
 #   include "lpm.h"
 #endif
 
 bool usb_power_connected(void) {
-    km_printf("usb io:%d\n",readPin(USB_POWER_SENSE_PIN));
 #ifdef USB_POWER_SENSE_PIN
     return readPin(USB_POWER_SENSE_PIN) == USB_POWER_CONNECTED_LEVEL;
 #else
@@ -45,6 +48,9 @@ __attribute__((weak)) void bhq_set_lowbat_led(bool on)
 
 void bhq_common_init(void)
 {
+# if defined(KB_CHECK_BATTERY_ENABLED)
+    battery_init();
+#endif
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
 }
 // --------------------  都是用于处理按键触发的变量 --------------------
@@ -227,14 +233,20 @@ void bhq_battery_task(void)
             bhq_set_lowbat_led(led_sta);
         }
         bluetooth_disable();
+# if defined(KB_CHECK_BATTERY_ENABLED)
+        battery_stop();
+#endif
     }
 }
 
 void bhq_wireless_task(void)
 {
     bhq_switch_host_task();
+# if defined(KB_CHECK_BATTERY_ENABLED)
     battery_percent_read_task();
     bhq_battery_task();
+#endif
+
 }
 
 // Keyboard level code can override this, but shouldn't need to.

@@ -53,3 +53,6 @@ void battery_read_and_update_data(void);
 void battery_percent_read_task(void);
 void battery_reset_timer(void);
 uint8_t battery_get(void);
+void battery_stop(void);
+void battery_start(void);
+void battery_init(void);
