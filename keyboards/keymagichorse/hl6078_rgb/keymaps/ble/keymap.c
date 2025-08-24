@@ -141,8 +141,17 @@ void del_all_blink_task(void)
     }
 }
 
+void rgb_matrix_all_black(void)
+{
+    for (size_t i = 0; i < RGB_MATRIX_LED_COUNT; i++)
+    {
+        rgb_matrix_set_color(i, RGB_BLACK);
+    }
+}
 // 矩阵灯任务
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+
+
 // **************************** 低电量闪烁逻辑 ****************************
     if (rgb_bat_low_flag == 1) {
         static uint16_t last_toggle = 0;   // 上次切换时间
@@ -157,9 +166,9 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         // 根据 led_on 状态设置颜色
         for (size_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
             if (led_on) {
-                rgb_matrix_set_color(i, RGB_RED); 
+                rgb_matrix_set_color(0, RGB_RED); 
             } else {
-                rgb_matrix_set_color(i, RGB_BLACK);      
+                rgb_matrix_set_color(0, RGB_BLACK);      
             }
         }
         return false;  
@@ -181,6 +190,24 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             // rgb_matrix_set_color(19, 255, 255, 255);
         }
     }  
+    // usb模式时，没有枚举成功，就强行灭灯
+    if(transport_get() == KB_TRANSPORT_USB)
+    {
+        if(USBD1.state != USB_ACTIVE)
+        {
+            rgb_matrix_all_black();
+        }
+    }
+    // 无线模式时，没有连接成功，就强行灭灯
+    if(transport_get() > KB_TRANSPORT_USB)
+    {
+        if(wireless_get() != WT_STATE_CONNECTED)
+        {
+            rgb_matrix_all_black();
+        }
+    }
+
+
 
 // ************** 闪烁rgb灯逻辑 **************
     for (int i = 0; i < MAX_BLINK_TASKS; i++) {
@@ -213,10 +240,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 // ************** 电量百分比 亮灯逻辑 **************
     if(rgb_bat_show_flag  == 1)   
     {
-        for (size_t i = 0; i < RGB_MATRIX_LED_COUNT; i++)
-        {
-            rgb_matrix_set_color(i, RGB_BLACK);
-        }
+        rgb_matrix_all_black();
         uint8_t bat_led_count = battery_get() / 10;
         if (battery_get() > 0 && bat_led_count == 0) {
             bat_led_count = 1;  
