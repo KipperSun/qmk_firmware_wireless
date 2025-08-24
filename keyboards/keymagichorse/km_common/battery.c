@@ -23,6 +23,7 @@
 
 uint32_t battery_timer = 0;
 uint8_t battery_percent = 100;
+
 // 电池电压转百分比
 uint8_t calculate_battery_percentage(uint16_t current_mv) {
     if (current_mv >= BATTER_MAX_MV) {
@@ -91,18 +92,20 @@ void battery_read_and_update_data(void)
     }
     battery_percent = new_percent;
     bhq_update_battery_percent(battery_percent, voltage_mV_actual);  // 上报电量
-    battery_timer = 0;
 }
 void battery_percent_read_task(void)
 { 
-    if(battery_timer == 0)
-    {
+
+    if (battery_timer == 0) {
         battery_timer = timer_read32();
+        battery_read_and_update_data();
+        wait_us(5000);          
+        battery_read_and_update_data();
     }
 
-    if (timer_elapsed32(battery_timer) > 2000)     // 1分钟
-    {
-        battery_timer = 0;
+    // 定时任务，2秒执行一次
+    if (timer_elapsed32(battery_timer) > 2000) {
+        battery_timer = timer_read32();
         battery_read_and_update_data();
     }
 }
