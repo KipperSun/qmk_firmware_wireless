@@ -23,6 +23,10 @@
 
 uint32_t battery_timer = 0;
 uint8_t battery_percent = 100;
+// 其实这个标志位算是是否上报电池电量到蓝牙模块。
+uint8_t battery_is_start = 0;
+
+
 // 电池电压转百分比
 uint8_t calculate_battery_percentage(uint16_t current_mv) {
     if (current_mv >= BATTER_MAX_MV) {
@@ -90,25 +94,30 @@ void battery_read_and_update_data(void)
         return;  // 不上传电量
     }
     battery_percent = new_percent;
+
+    if(battery_is_start == 0)
+    {
+        return;
+    }
     bhq_update_battery_percent(battery_percent, voltage_mV_actual);  // 上报电量
-    battery_timer = 0;
 }
 void battery_percent_read_task(void)
 { 
-    if(battery_timer == 0)
-    {
+
+    if (battery_timer == 0) {
         battery_timer = timer_read32();
+        battery_read_and_update_data();
     }
 
-    if (timer_elapsed32(battery_timer) > 2000)     // 1分钟
-    {
-        battery_timer = 0;
+    // 定时任务，2秒执行一次
+    if (timer_elapsed32(battery_timer) > 2000) {
+        battery_timer = timer_read32();
         battery_read_and_update_data();
     }
 }
 void battery_reset_timer(void)
 {
-    battery_timer = 0;
+    battery_timer = timer_read32();
 }
 
 uint8_t battery_get(void)
@@ -116,3 +125,17 @@ uint8_t battery_get(void)
     return battery_percent;
 }
 
+void battery_stop(void)
+{
+    battery_is_start = 0;
+}
+
+void battery_start(void)
+{
+    battery_is_start = 1;
+}
+
+void battery_init(void)
+{
+    // battery_reset_timer();
+}
