@@ -117,7 +117,7 @@ void battery_percent_read_task(void)
 }
 void battery_reset_timer(void)
 {
-    battery_timer = 0;
+    battery_timer = timer_read32();
 }
 
 uint8_t battery_get(void)

@@ -39,6 +39,12 @@ uint16_t rgb_bat_led_idx[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 // 低电量提示
 uint8_t rgb_bat_low_flag = 0;
 
+// 唤醒后延时点亮 RGB 的标志位
+static uint8_t lpm_wakeup_delay_open_rgb_flag = 0;
+// 记录唤醒时间
+static uint32_t lpm_wakeup_delay_open_rgb_timer = 0;
+
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT(
     QK_GESC, KC_1,    KC_2,     KC_3,     KC_4,    KC_5,    KC_6,    KC_7,    KC_8,      KC_9,     KC_0,     KC_MINS,  KC_EQL,  KC_BSLS, KC_BSPC,
@@ -150,7 +156,19 @@ void rgb_matrix_all_black(void)
 }
 // 矩阵灯任务
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-
+    if (lpm_wakeup_delay_open_rgb_flag == 1) {
+        lpm_wakeup_delay_open_rgb_flag = 2;
+        lpm_wakeup_delay_open_rgb_timer = timer_read32();
+        rgb_matrix_all_black();
+        return false;
+    }
+    if (lpm_wakeup_delay_open_rgb_flag == 2) {
+        rgb_matrix_all_black();
+        if (timer_elapsed32(lpm_wakeup_delay_open_rgb_timer) > 500) { // 延时 500ms
+            lpm_wakeup_delay_open_rgb_flag = 0;
+        }
+        return false;
+    }
 
 // **************************** 低电量闪烁逻辑 ****************************
     if (rgb_bat_low_flag == 1) {
@@ -162,14 +180,12 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             led_on = !led_on;              // 状态取反
             last_toggle = timer_read();    // 更新时间戳
         }
-
+        rgb_matrix_all_black();
         // 根据 led_on 状态设置颜色
-        for (size_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-            if (led_on) {
-                rgb_matrix_set_color(0, RGB_RED); 
-            } else {
-                rgb_matrix_set_color(0, RGB_BLACK);      
-            }
+        if (led_on) {
+            rgb_matrix_set_color(0, RGB_RED); 
+        } else {
+            rgb_matrix_set_color(0, RGB_BLACK);      
         }
         return false;  
     }
@@ -336,6 +352,7 @@ __attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
 // 低功耗外围设备电源控制
 void lpm_device_power_open(void) 
 {
+    lpm_wakeup_delay_open_rgb_flag = 1;
     gpio_set_pin_output(WS2812_POWER_PIN);
     gpio_write_pin_high(WS2812_POWER_PIN);
     if(is_sleep == 1)
@@ -353,6 +370,7 @@ void lpm_device_power_open(void)
 //关闭外围设备电源
 void lpm_device_power_close(void) 
 {
+
     is_sleep = 1;
     // 低功耗前 获取矩阵灯的状态
     rgb_matrix_is_enabled_temp_v = rgb_matrix_is_enabled();
