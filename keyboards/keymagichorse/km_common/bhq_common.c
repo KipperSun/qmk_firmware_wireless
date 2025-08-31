@@ -276,5 +276,12 @@ bool via_command_bhq(uint8_t *data, uint8_t length) {
         BHQ_SendCmd(0, &data[4], data[3]);
         return true;
     }
+    // 让QMK键盘强制设置为USB模式
+    if(command_id == 0xF2)
+    {
+        transport_set(KB_TRANSPORT_USB);
+        host_raw_hid_send(data,length);
+        return true;
+    }
     return false;
 }
