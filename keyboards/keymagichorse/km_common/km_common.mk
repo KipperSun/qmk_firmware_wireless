@@ -23,6 +23,7 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
     endif
 
     ifeq ($(strip $(KB_CHECK_BATTERY_ENABLED)), yes)
+        OPT_DEFS += -DKB_CHECK_BATTERY_ENABLED
         # 打开QMK的ADC读取功能
         ANALOG_DRIVER_REQUIRED = yes
         SRC += km_common/battery.c

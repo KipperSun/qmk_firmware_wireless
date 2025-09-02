@@ -24,13 +24,16 @@
 #include "battery.h"
 #include "outputselect.h"
 #include "usb_main.h"
-#include "battery.h"
+
+# if defined(KB_CHECK_BATTERY_ENABLED)
+#   include "battery.h"
+#endif
+
 # if defined(KB_LPM_ENABLED)
 #   include "lpm.h"
 #endif
 
 bool usb_power_connected(void) {
-    km_printf("usb io:%d\n",readPin(USB_POWER_SENSE_PIN));
 #ifdef USB_POWER_SENSE_PIN
     return readPin(USB_POWER_SENSE_PIN) == USB_POWER_CONNECTED_LEVEL;
 #else
@@ -45,6 +48,9 @@ __attribute__((weak)) void bhq_set_lowbat_led(bool on)
 
 void bhq_common_init(void)
 {
+# if defined(KB_CHECK_BATTERY_ENABLED)
+    battery_init();
+#endif
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
 }
 // --------------------  都是用于处理按键触发的变量 --------------------
@@ -227,14 +233,20 @@ void bhq_battery_task(void)
             bhq_set_lowbat_led(led_sta);
         }
         bluetooth_disable();
+# if defined(KB_CHECK_BATTERY_ENABLED)
+        battery_stop();
+#endif
     }
 }
 
 void bhq_wireless_task(void)
 {
     bhq_switch_host_task();
+# if defined(KB_CHECK_BATTERY_ENABLED)
     battery_percent_read_task();
     bhq_battery_task();
+#endif
+
 }
 
 // Keyboard level code can override this, but shouldn't need to.
@@ -262,6 +274,13 @@ bool via_command_bhq(uint8_t *data, uint8_t length) {
         // cmdid + 2 frame headers 
         // The third one is isack the fourth one is length and the fifth one is data frame
         BHQ_SendCmd(0, &data[4], data[3]);
+        return true;
+    }
+    // 让QMK键盘强制设置为USB模式
+    if(command_id == 0xF2)
+    {
+        transport_set(KB_TRANSPORT_USB);
+        host_raw_hid_send(data,length);
         return true;
     }
     return false;

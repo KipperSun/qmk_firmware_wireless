@@ -67,13 +67,15 @@
             "solid_splash": true,
             "solid_multisplash": true
         },
-        "max_brightness": 150,
+        // 150max
         "driver": "ws2812",
+        "max_brightness": 100,
+        "sleep": true,
         "led_count": 78
       },
     "ws2812": {
-        "pin": "A7"
-        // "driver": "pwm"
+        "pin": "A7",
+        "driver": "pwm"
     },
     "layouts": {
         "LAYOUT": {
