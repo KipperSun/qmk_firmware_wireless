@@ -62,7 +62,9 @@ static uint8_t key_ble_host_index = 0;         // 蓝牙索引
 
 
 bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
+# if defined(KB_CHECK_BATTERY_ENABLED)
     battery_reset_timer();
+#endif
     // TODO: 使用QMK的无线键值，并且提取这里的逻辑到km_common文件夹
 #   if defined(KB_LPM_ENABLED)
     lpm_timer_reset();  // 这里用于低功耗，按下任何按键刷新低功耗计时器
@@ -211,10 +213,17 @@ void bhq_switch_host_task(void){
     }
 }
 
+# if defined(KB_CHECK_BATTERY_ENABLED)
 void bhq_battery_task(void)
 {
     static uint32_t battery_low_led_flicker_time = 0;
     static uint8_t led_sta = 0;
+    if(usb_power_connected())
+    {
+        battery_low_led_flicker_time = 0;
+        led_sta = 0;
+        return;
+    }
     if(battery_get() > 5)
     {
         battery_low_led_flicker_time = 0;
@@ -233,11 +242,10 @@ void bhq_battery_task(void)
             bhq_set_lowbat_led(led_sta);
         }
         bluetooth_disable();
-# if defined(KB_CHECK_BATTERY_ENABLED)
         battery_stop();
-#endif
     }
 }
+#endif
 
 void bhq_wireless_task(void)
 {

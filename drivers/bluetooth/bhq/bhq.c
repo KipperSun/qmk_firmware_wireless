@@ -99,9 +99,12 @@ void BHQ_SendData(uint8_t *dat, uint16_t length)
     bhq_printf("\r\n");
 }
 
+bool bhq_available(void) {
+    return uart_available();
+}
 
 int16_t BHQ_ReadData(void) {
-    if (uart_available()) {
+    if (bhq_available()) {
         return uart_read();
     } else {
         return -1;

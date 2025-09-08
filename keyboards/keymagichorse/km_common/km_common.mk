@@ -19,6 +19,7 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
     # 低功耗
     ifeq ($(strip $(KB_LPM_ENABLED)), yes)
         OPT_DEFS += -DKB_LPM_ENABLED
+        OPT_DEFS += -DKB_LPM_DRIVER
         SRC += km_common/${KB_LPM_DRIVER}.c
     endif
 
