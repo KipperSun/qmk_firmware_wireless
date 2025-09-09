@@ -36,13 +36,21 @@ uint8_t rgb_matrix_is_enabled_temp_v = 0;
 uint8_t rgb_bat_show_flag  = 0;
 uint16_t rgb_bat_led_idx[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 #define RGB_BAT      QK_USER_1       
+#define U_RFB_TOGG      QK_USER_2       
 // 低电量提示
 uint8_t rgb_bat_low_flag = 0;
-
 // 唤醒后延时点亮 RGB 的标志位
 static uint8_t lpm_wakeup_delay_open_rgb_flag = 0;
 // 记录唤醒时间
 static uint32_t lpm_wakeup_delay_open_rgb_timer = 0;
+typedef union {
+    uint32_t raw;
+    struct {
+        uint8_t temp_rgb_is_open :8;
+    };
+} user_config_t;
+
+user_config_t user_config;
 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -73,6 +81,38 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 
+// 貌似keyboard_post_init_user -> eeconfig_init_user
+// 1 After initializing the peripheral
+void keyboard_post_init_user(void)
+{
+    gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
+    gpio_write_pin_high(WS2812_POWER_PIN);
+    // rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_REACTIVE_WIDE);
+    // rgb_matrix_mode_noeeprom(RGB_MATRIX_MULTISPLASH);    // 这两个测试xy用，挺好
+    // rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_SPIRAL);
+    user_config.raw = eeconfig_read_user();
+    km_printf("keyboard_post_init_user->user_config.raw: %ld  user_config.temp_rgb_is_open:%d\r\n",user_config.raw,user_config.temp_rgb_is_open);
+    // 如果出现大于1的情况，也可能是脏数据也有可能是未初始化
+    if(user_config.temp_rgb_is_open > 1)
+    {
+        user_config.raw = 0;
+        user_config.temp_rgb_is_open = 1;
+        rgb_matrix_mode_noeeprom(RGB_MATRIX_MULTISPLASH);    // 这两个测试xy用，挺好
+        eeconfig_update_user(user_config.raw);
+        km_printf(">1");
+    }
+    rgb_matrix_is_enabled_temp_v = rgb_matrix_is_enabled();
+    rgb_matrix_enable();    // 不管任何情况下都打开rgb
+}
+
+// 2
+void eeconfig_init_user(void) 
+{// 默认就给他rgb干开
+    user_config.raw = 0;
+    user_config.temp_rgb_is_open = 1;
+    eeconfig_update_user(user_config.raw);
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if(keycode == RGB_BAT)
     {
@@ -84,6 +124,19 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         {
             rgb_bat_show_flag  = 0;
         }
+    }
+    if(keycode == RM_TOGG)
+    {
+        if(record->event.pressed)
+        {
+            user_config.temp_rgb_is_open  = !user_config.temp_rgb_is_open;
+            eeconfig_update_user(user_config.raw);
+        }
+        else
+        {
+        }
+        rgb_matrix_enable();    // 不管任何情况下都打开rgb
+        return false;
     }
     return process_record_bhq(keycode, record);
 }
@@ -156,6 +209,10 @@ void rgb_matrix_all_black(void)
 }
 // 矩阵灯任务
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    if(user_config.temp_rgb_is_open == false)
+    {
+        rgb_matrix_all_black();
+    }
     if (lpm_wakeup_delay_open_rgb_flag == 1) {
         lpm_wakeup_delay_open_rgb_flag = 2;
         lpm_wakeup_delay_open_rgb_timer = timer_read32();
@@ -333,17 +390,6 @@ void wireless_rf24g_hanlde_kb(uint8_t connectSta,uint8_t pairingSta)
     }
 }
 
-// After initializing the peripheral
-void keyboard_post_init_kb(void)
-{
-    gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
-    gpio_write_pin_high(WS2812_POWER_PIN);
-    // rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_REACTIVE_WIDE);
-    // rgb_matrix_mode_noeeprom(RGB_MATRIX_MULTISPLASH);    // 这两个测试xy用，挺好
-    // rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_SPIRAL);
-    rgb_matrix_is_enabled_temp_v = rgb_matrix_is_enabled();
-
-}
 __attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
     return via_command_bhq(data, length);
 }
