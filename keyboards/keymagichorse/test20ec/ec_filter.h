@@ -25,7 +25,7 @@ void ec_filter_initqueue(ec_filter_RingBuffer *efb)
     memset(efb->filter_datas, 0, sizeof(efb->filter_datas));
     efb->head           = 0;
     efb->tail           = 0;
-    efb->a              = 0.05f;
+    efb->a              = 0.1f;
     efb->b              = 0.15f;
     efb->filtered_value = 0;
     efb->trend          = 0;
