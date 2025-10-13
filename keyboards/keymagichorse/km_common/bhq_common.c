@@ -218,31 +218,54 @@ void bhq_battery_task(void)
 {
     static uint32_t battery_low_led_flicker_time = 0;
     static uint8_t led_sta = 0;
-    if(usb_power_connected())
-    {
+    static uint8_t bhq_inited = 1;   // 当前初始化状态：1=正常已初始化，0=低电未初始化
+
+    /* USB 供电时，不做低电处理 */
+    if (usb_power_connected()) {
         battery_low_led_flicker_time = 0;
         led_sta = 0;
         return;
     }
-    if(battery_get() > 5)
+
+    uint8_t battery_percent = battery_get();
+
+    /* ----------- 电量正常（>5%） ----------- */
+    if (battery_percent > 5)
     {
+        /* 若之前处于低电未初始化状态，则执行一次重新初始化 */
+        if (bhq_inited == 0)
+        {
+            bhq_inited = 1;
+            km_printf("Battery recovered, reinit BHQ.\r\n");
+            bluetooth_enable();
+            bhq_set_lowbat_led(0);
+            battery_start();
+        }
         battery_low_led_flicker_time = 0;
-        bluetooth_enable();
     }
+    /* ----------- 电量过低（≤5%） ----------- */
     else
     {
-        if(battery_low_led_flicker_time == 0)
+        /* 第一次检测到低电状态时 */
+        if (bhq_inited == 1)
+        {
+            bhq_inited = 0;
+            km_printf("Battery low, entering power save mode.\r\n");
+            bluetooth_disable();
+            battery_stop();         // 这里并不是停止电池采样，而是停止上报电量到蓝牙
+        }
+        /* LED 闪烁（500ms 翻转一次） */
+        if (battery_low_led_flicker_time == 0)
         {
             battery_low_led_flicker_time = timer_read32();
         }
-        if(timer_elapsed32(battery_low_led_flicker_time) >= 500)
+
+        if (timer_elapsed32(battery_low_led_flicker_time) >= 500)
         {
             battery_low_led_flicker_time = 0;
             led_sta = !led_sta;
             bhq_set_lowbat_led(led_sta);
         }
-        bluetooth_disable();
-        battery_stop();
     }
 }
 #endif
