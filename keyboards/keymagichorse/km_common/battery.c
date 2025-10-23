@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "battery.h"
-#include "analog.h"
+#include "km_analog.h"
 #include "bhq.h"
 #include "bhq_common.h"
 #include "wireless.h"
@@ -51,14 +51,13 @@ void battery_read_and_update_data(void)
     uint16_t min_v = 0xFFFF;
     const uint8_t NUM_SAMPLES = 10;
 
-    analogReadPin(BATTER_ADC_PIN);
+    km_analogReadPin(BATTER_ADC_PIN);
     wait_us(50);
 
     for (uint8_t i = 0; i < NUM_SAMPLES; i++) {
-        uint16_t v = analogReadPin(BATTER_ADC_PIN);
+        uint16_t v = km_analogReadPin(BATTER_ADC_PIN) >> 2;    // 20251015：这里使用km_analog.c没有缩放，所以这里缩放
         if (v == 0) {
-            wait_us(10); 
-            v = analogReadPin(BATTER_ADC_PIN);
+            return;
         }
         sum += v;
         if (v > max_v) max_v = v;
@@ -134,6 +133,7 @@ void battery_stop(void)
 void battery_start(void)
 {
     battery_is_start = 1;
+    km_analogReadPin(BATTER_ADC_PIN);
 }
 
 void battery_init(void)
