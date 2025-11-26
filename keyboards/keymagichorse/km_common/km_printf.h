@@ -16,16 +16,5 @@
 
 #pragma once
 
-
-#ifdef KM_DEBUG
-#    include "SEGGER_RTT.h"
-#    define km_printf(format, ...) SEGGER_RTT_printf(0, format, ##__VA_ARGS__)
-#else
-#    define km_printf(format, ...)
-#endif
-
-#ifdef KM_DEBUG
-#    define km_printf_init() SEGGER_RTT_Init()
-#else
-#    define km_printf_init()
-#endif
+void km_printf_init(void);
+int km_printf(const char* format, ...);

@@ -38,16 +38,16 @@
 
 // 蓝牙通道控制（短按开启广播，长按进入配对广播）
 // 蓝牙通道 0
-#ifndef BL_SW_0
-#   define BL_SW_0 BT_PRF1     
+#ifndef BLE_SW1
+#   define BLE_SW1 BT_PRF1     
 #endif
 // 蓝牙通道 1
-#ifndef BL_SW_1
-#   define BL_SW_1 BT_PRF2      
+#ifndef BLE_SW2
+#   define BLE_SW2 BT_PRF2      
 #endif
 // 蓝牙通道 2
-#ifndef BL_SW_2
-#   define BL_SW_2 BT_PRF3      
+#ifndef BLE_SW3
+#   define BLE_SW3 BT_PRF3      
 #endif
 
 // 蓝牙控制功能
@@ -60,15 +60,10 @@
 #   define BLE_OFF      QK_USER_29       
 #endif
 
-
-#ifndef USB_POWER_SENSE_PIN                         // usb insert detection 
-#    define USB_POWER_SENSE_PIN     A10
-#endif
-#ifndef USB_POWER_CONNECTED_LEVEL                   // active level
-#    define USB_POWER_CONNECTED_LEVEL 1    
-#endif
-
 void bhq_set_lowbat_led(bool on);
+
+void bhq_bat_low_handle_kb(void);
+
 
 void bhq_common_init(void);
 bool usb_power_connected(void);

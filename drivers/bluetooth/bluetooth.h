@@ -20,7 +20,6 @@
 #include <stdint.h>
 #include "report.h"
 
-
 /**
  * \brief Initialize the Bluetooth system.
  */
@@ -34,12 +33,12 @@ void bluetooth_task(void);
 /**
  * \brief Enable Bluetooth data transmission
  */
-void bluetooth_enable(void);
+void bluetooth_enabled(void);
 
 /**
  * \brief Disable Bluetooth data transmission
  */
-void bluetooth_disable(void);
+void bluetooth_disabled(void);
 
 /**
  * \brief Check if Bluetooth transmission is enabled

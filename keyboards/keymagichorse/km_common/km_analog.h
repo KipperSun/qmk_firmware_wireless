@@ -32,12 +32,12 @@ typedef struct {
         i, a         \
     }
 
-void analogAdcStop(pin_t pin);
 int16_t analogReadPin(pin_t pin);
 int16_t analogReadPinAdc(pin_t pin, uint8_t adc);
 adc_mux pinToMux(pin_t pin);
-
 int16_t adc_read(adc_mux mux);
+
+void km_analogAdcStop(pin_t pin);
 int16_t km_analogReadPin(pin_t pin);
 
 #ifdef __cplusplus

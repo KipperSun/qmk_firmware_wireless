@@ -127,7 +127,7 @@ void enter_low_power_mode_prepare(void)
     shift595_pin_sleep();
 #endif
 # if defined(KB_CHECK_BATTERY_ENABLED)
-    battery_stop();
+    battery_disable_read();
 #endif
 
     uint8_t i = 0;
@@ -229,8 +229,9 @@ void enter_low_power_mode_prepare(void)
 #endif
     // clear_keyboard();
     // layer_clear();
+    bhq_common_init();
 # if defined(KB_CHECK_BATTERY_ENABLED)
-    battery_start();
+    battery_enable_read();
 #endif
     lpm_device_power_open();    // 外围设备 电源 关闭
   

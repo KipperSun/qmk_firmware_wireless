@@ -27,6 +27,7 @@
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
+uint8_t bhq_bat_low_sta = 0; // 0:正常, 1:10%低电量, 2:5%严重低电量
 #endif
 
 # if defined(KB_LPM_ENABLED)
@@ -41,16 +42,19 @@ bool usb_power_connected(void) {
 #endif
 }
 
-__attribute__((weak)) void bhq_set_lowbat_led(bool on)
-{
-    // TODO:补充
-}
 
 void bhq_common_init(void)
 {
+#   if defined(KM_DEBUG)
+    km_printf_init();
+    km_printf("hello bhq debug \r\n");
+#   endif
+
 # if defined(KB_CHECK_BATTERY_ENABLED)
     battery_init();
+    bhq_bat_low_sta = 0;
 #endif
+
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
 }
 // --------------------  都是用于处理按键触发的变量 --------------------
@@ -60,12 +64,11 @@ static uint8_t key_ble_host_index = 0;         // 蓝牙索引
 // --------------------  都是用于处理按键触发的变量 --------------------
 
 
-
+// 按键切换主机逻辑
 bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
 # if defined(KB_CHECK_BATTERY_ENABLED)
     battery_reset_timer();
 #endif
-    // TODO: 使用QMK的无线键值，并且提取这里的逻辑到km_common文件夹
 #   if defined(KB_LPM_ENABLED)
     lpm_timer_reset();  // 这里用于低功耗，按下任何按键刷新低功耗计时器
 #endif
@@ -77,9 +80,9 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
             keycode != BLE_TOG &&
             keycode != RF_TOG &&
             keycode != USB_TOG &&
-            keycode != BL_SW_0 &&
-            keycode != BL_SW_1 &&
-            keycode != BL_SW_2 &&
+            keycode != BLE_SW1 &&
+            keycode != BLE_SW2 &&
+            keycode != BLE_SW3 &&
             keycode != BLE_RESET &&
             keycode != BLE_OFF
         ) {
@@ -96,9 +99,9 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
             }
         }
     }
-    km_printf("keycide:%d %d\n",keycode,record->event.pressed);
+    // km_printf("keycode:%d %d\n",keycode,record->event.pressed);
     // 蓝牙模式点按
-    if(keycode == BL_SW_0 || keycode == BL_SW_1 || keycode == BL_SW_2)
+    if(keycode == BLE_SW1 || keycode == BLE_SW2 || keycode == BLE_SW3)
     {
         if(record->event.pressed)
         {   // 赋值 并记录当前时间
@@ -111,17 +114,17 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
             {
                 switch (keycode)
                 {
-                    case BL_SW_0:
+                    case BLE_SW1:
                         key_ble_host_index = 0;
                         break;  
-                    case BL_SW_1:
+                    case BLE_SW2:
                         key_ble_host_index = 1;
                         break;  
-                    case BL_SW_2:
+                    case BLE_SW3:
                         key_ble_host_index = 2;
                         break;  
                 }
-                km_printf("key short down:bleid->%d\n",key_ble_host_index);
+                // km_printf("key short down:bleid->%d\n",key_ble_host_index);
                 // 打开非配对模式蓝牙广播 10 = 10S
                 bhq_OpenBleAdvertising(key_ble_host_index, 30);
                 transport_set(key_ble_host_index + KB_TRANSPORT_BLUETOOTH_1);  
@@ -182,26 +185,26 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
 void bhq_switch_host_task(void){
     static bool has_switched = false;
     // 蓝牙模式长按的
-    if (this_down_wireless_keycode == BL_SW_0 ||
-        this_down_wireless_keycode == BL_SW_1 ||
-        this_down_wireless_keycode == BL_SW_2)
+    if (this_down_wireless_keycode == BLE_SW1 ||
+        this_down_wireless_keycode == BLE_SW2 ||
+        this_down_wireless_keycode == BLE_SW3)
     {
         if (!has_switched && timer_elapsed32(down_wirlees_keycode_time) >= 1000)
         {
             has_switched = true;  // 标志位，用于只执行一次
             switch (this_down_wireless_keycode)
             {
-                case BL_SW_0:
+                case BLE_SW1:
                     key_ble_host_index = 0;
                     break;
-                case BL_SW_1:
+                case BLE_SW2:
                     key_ble_host_index = 1;
                     break;
-                case BL_SW_2:
+                case BLE_SW3:
                     key_ble_host_index = 2;
                     break;
             }
-            km_printf("key long down:bleid->%d\n",key_ble_host_index);
+            // km_printf("key long down:bleid->%d\n",key_ble_host_index);
             // 打开配对广播
             bhq_SetPairingMode(key_ble_host_index, 30);
             transport_set(key_ble_host_index + KB_TRANSPORT_BLUETOOTH_1);  
@@ -214,68 +217,51 @@ void bhq_switch_host_task(void){
 }
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
-void bhq_battery_task(void)
+// 电池回调函数
+__attribute__((weak)) void bhq_bat_low_handle_kb(void){}
+void bhq_bat_low_check_task(void)
 {
-    static uint32_t battery_low_led_flicker_time = 0;
-    static uint8_t led_sta = 0;
-    static uint8_t bhq_inited = 1;   // 当前初始化状态：1=正常已初始化，0=低电未初始化
-
-    /* USB 供电时，不做低电处理 */
     if (usb_power_connected()) {
-        battery_low_led_flicker_time = 0;
-        led_sta = 0;
+        if (bhq_bat_low_sta != 0) {
+            bhq_bat_low_sta = 0;
+            bluetooth_enabled();  // USB供电时确保蓝牙开启
+        }
         return;
     }
-
-    uint8_t battery_percent = battery_get();
-
-    /* ----------- 电量正常（>5%） ----------- */
-    if (battery_percent > 5)
-    {
-        /* 若之前处于低电未初始化状态，则执行一次重新初始化 */
-        if (bhq_inited == 0)
-        {
-            bhq_inited = 1;
-            km_printf("Battery recovered, reinit BHQ.\r\n");
-            bluetooth_enable();
-            bhq_set_lowbat_led(0);
-            battery_start();
+    uint8_t battery_percent = battery_percent_get();
+    if (battery_percent <= 5) {
+        if (bhq_bat_low_sta != 2) {
+            bhq_bat_low_sta = 2;
+            bluetooth_disabled();         // 严重低电量时禁用蓝牙
+            battery_disable_ble_update();
+            bhq_bat_low_handle_kb(); // 5%严重低电量
         }
-        battery_low_led_flicker_time = 0;
-    }
-    /* ----------- 电量过低（≤5%） ----------- */
-    else
-    {
-        /* 第一次检测到低电状态时 */
-        if (bhq_inited == 1)
-        {
-            bhq_inited = 0;
-            km_printf("Battery low, entering power save mode.\r\n");
-            bluetooth_disable();
-            battery_stop();         // 这里并不是停止电池采样，而是停止上报电量到蓝牙
+    } 
+    else if (battery_percent <= 10) {
+        if (bhq_bat_low_sta != 1) {
+            bhq_bat_low_sta = 1;
+            bluetooth_disabled();         // 严重低电量时禁用蓝牙
+            battery_disable_ble_update();
+            bhq_bat_low_handle_kb(); // 10%低电量
         }
-        /* LED 闪烁（500ms 翻转一次） */
-        if (battery_low_led_flicker_time == 0)
-        {
-            battery_low_led_flicker_time = timer_read32();
-        }
-
-        if (timer_elapsed32(battery_low_led_flicker_time) >= 500)
-        {
-            battery_low_led_flicker_time = 0;
-            led_sta = !led_sta;
-            bhq_set_lowbat_led(led_sta);
+    } 
+    else {
+        if (bhq_bat_low_sta != 0) {
+            bhq_bat_low_sta = 0; // 电量恢复正常
+            bluetooth_enabled(); // 确保蓝牙开启
+            battery_enable_ble_update();
         }
     }
 }
+
 #endif
 
 void bhq_wireless_task(void)
 {
     bhq_switch_host_task();
 # if defined(KB_CHECK_BATTERY_ENABLED)
-    battery_percent_read_task();
-    bhq_battery_task();
+    battery_task();
+    bhq_bat_low_check_task();   // 低电量检测
 #endif
 
 }
@@ -284,21 +270,21 @@ void bhq_wireless_task(void)
 // Controlling custom features should be done by overriding
 // via_custom_value_command_kb() instead.
 bool via_command_bhq(uint8_t *data, uint8_t length) {
-    // 此逻辑删除 会失去蓝牙模块升级功能 以及蓝牙改键功能！！！！！！！
+    // 此逻辑删除 会失去蓝牙模块升级功能 以及蓝牙改键功能 ！
     uint8_t command_id   = data[0];
-    uint8_t i = 0;
 
 #   if defined(KB_LPM_ENABLED)
     lpm_timer_reset();  // 这里用于低功耗，刷新低功耗计时器
 #endif
 
-    km_printf("cmdid:%02x  length:%d\r\n",command_id,length);
-    km_printf("read host app of data \r\n[");
-    for (i = 0; i < length; i++)
-    {
-        km_printf("%02x ",data[i]);
-    }
-    km_printf("]\r\n");
+    // uint8_t i = 0;
+    // km_printf("cmdid:%02x  length:%d\r\n",command_id,length);
+    // km_printf("read host app of data \r\n[");
+    // for (i = 0; i < length; i++)
+    // {
+    //     km_printf("%02x ",data[i]);
+    // }
+    // km_printf("]\r\n");
 
     if(command_id == 0xF1)
     {

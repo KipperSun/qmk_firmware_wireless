@@ -18,11 +18,11 @@
 #include "quantum.h"
 
 // 电池电压最高最低 mv
-#ifndef BATTER_MAX_MV                       
-#    define BATTER_MAX_MV     4150
+#ifndef BATTERY_MAX_MV                       
+#    define BATTERY_MAX_MV     4150
 #endif
-#ifndef BATTER_MIN_MV                      
-#    define BATTER_MIN_MV     3500
+#ifndef BATTERY_MIN_MV                      
+#    define BATTERY_MIN_MV     3500
 #endif
 
 // ------------------------ 电池分压电阻的配置 ------------------------
@@ -38,21 +38,25 @@
 // ------------------------ 电池分压电阻的配置 ------------------------
 
 // ------------------------ 电池电压读取的引脚 ------------------------
-#ifndef BATTER_ADC_PIN                       
-#    define BATTER_ADC_PIN     B1
+#ifndef BATTERY_ADC_PIN                       
+#    define BATTERY_ADC_PIN     B1
 #endif
 // https://docs.qmk.fm/drivers/adc#stm32
-#ifndef BATTER_ADC_DRIVER                      
-#    define BATTER_ADC_DRIVER     ADCD1
+#ifndef BATTERY_ADC_DRIVER                      
+#    define BATTERY_ADC_DRIVER     ADCD1
 #endif
 // ------------------------ 电池电压读取的引脚 ------------------------
 
 
 
-void battery_read_and_update_data(void);
-void battery_percent_read_task(void);
-void battery_reset_timer(void);
-uint8_t battery_get(void);
-void battery_stop(void);
-void battery_start(void);
+
 void battery_init(void);
+void battery_task(void);
+void battery_reset_timer(void);
+uint8_t battery_percent_get(void);
+
+// 控制函数
+void battery_enable_read(void);
+void battery_disable_read(void);
+void battery_enable_ble_update(void);
+void battery_disable_ble_update(void);

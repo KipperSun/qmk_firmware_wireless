@@ -14,27 +14,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "battery.h"
+#include "timer.h"
+#include "bhq_common.h"
 #include "km_analog.h"
 #include "bhq.h"
-#include "bhq_common.h"
-#include "wireless.h"
-#include "transport.h"
-#include "timer.h"
 
-uint32_t battery_timer = 0;
-uint8_t battery_percent = 100;
-// 其实这个标志位算是是否上报电池电量到蓝牙模块。
-uint8_t battery_is_start = 0;
+uint8_t battery_percent = 100;  // 电池电量百分比
+uint8_t battery_is_valid = 0;   // 电池电量是否有效
+uint16_t battery_mv = 0;        // 电池毫伏
+uint32_t battery_timer = 0;     // 电池采样计时
 
+uint8_t battery_update_ble_flag = 0;    // 是否更新电量百分比到蓝牙模块
+uint8_t battery_is_read_flag = 0;        // 是否允许读取电量
 
 // 电池电压转百分比
 uint8_t calculate_battery_percentage(uint16_t current_mv) {
-    if (current_mv >= BATTER_MAX_MV) {
+    if (current_mv >= BATTERY_MAX_MV) {
         return 100;
-    } else if (current_mv <= BATTER_MIN_MV) {
+    } else if (current_mv <= BATTERY_MIN_MV) {
         return 0;
     } else {
-        uint16_t percentage = ((current_mv - BATTER_MIN_MV) * 100) / (BATTER_MAX_MV - BATTER_MIN_MV);
+        uint16_t percentage = ((current_mv - BATTERY_MIN_MV) * 100) / (BATTERY_MAX_MV - BATTERY_MIN_MV);
         // 如果百分比超过100，确保其被限制在100以内
         if (percentage > 100) {
             percentage = 100;
@@ -43,22 +43,41 @@ uint8_t calculate_battery_percentage(uint16_t current_mv) {
     }
 }
 
-// 读取并更新数据
-void battery_read_and_update_data(void)
+// 读取电量百分比
+uint8_t battery_read_percent(void)
 {
-    uint32_t sum   = 0;
+    uint8_t sta = 1;
+    /* USB 供电时固定 100% */
+    if (usb_power_connected()) {
+        battery_percent = 100;
+        return 0;
+    }
+
+    uint32_t sum = 0;
     uint16_t max_v = 0;
-    uint16_t min_v = 0xFFFF;
+    uint16_t min_v = UINT16_MAX;
     const uint8_t NUM_SAMPLES = 10;
 
-    km_analogReadPin(BATTER_ADC_PIN);
+    // ADC采样
+    km_analogReadPin(BATTERY_ADC_PIN);
     wait_us(50);
 
-    for (uint8_t i = 0; i < NUM_SAMPLES; i++) {
-        uint16_t v = km_analogReadPin(BATTER_ADC_PIN) >> 2;    // 20251015：这里使用km_analog.c没有缩放，所以这里缩放
-        if (v == 0) {
-            return;
+    for (uint8_t i = 0; i < NUM_SAMPLES; i++) 
+    {
+        uint16_t v = km_analogReadPin(BATTERY_ADC_PIN) >> 2;
+        
+        // 异常值处理
+        if (v < 5) {
+            wait_us(10); 
+            v = km_analogReadPin(BATTERY_ADC_PIN) >> 2;
+            if (v < 5) {
+                wait_us(50);
+                km_analogAdcStop(BATTERY_ADC_PIN);
+                sta = 0;
+                break;  // 采样失败直接返回
+            }
         }
+        
         sum += v;
         if (v > max_v) max_v = v;
         if (v < min_v) min_v = v;
@@ -68,9 +87,10 @@ void battery_read_and_update_data(void)
     sum -= (uint32_t)max_v + (uint32_t)min_v;
     uint16_t adc = (uint16_t)(sum / (NUM_SAMPLES - 2));
 
-    /* 转换为电压（mV） */
-    uint16_t voltage_mV_Fenya  = (adc * 3300) / 1023;
-    uint16_t voltage_mV_actual = voltage_mV_Fenya * (1 + (BAT_R_UPPER / BAT_R_LOWER));
+    /* 转换为电压（mV）- 修复精度问题 */
+    uint16_t voltage_mV_Fenya = (adc * 3300UL) / 1023;
+    
+    uint16_t voltage_mV_actual = (voltage_mV_Fenya * (BAT_R_UPPER + BAT_R_LOWER)) / BAT_R_LOWER;
 
     /* 计算电量百分比 */
     uint8_t new_percent = calculate_battery_percentage(voltage_mV_actual);
@@ -79,64 +99,87 @@ void battery_read_and_update_data(void)
     new_percent = ((new_percent + 2) / 5) * 5;
     if (new_percent > 100) new_percent = 100;
 
-    km_printf("adc:%d fymv:%d sjmv:%d bfb:%d\r\n",
-              adc, voltage_mV_Fenya, voltage_mV_actual, new_percent);
-    km_printf("adcState:%d\r\n", ADCD1.state);
 
-    analogAdcStop(BATTER_ADC_PIN);
-
-    /* USB 供电时固定 100% */
-    if (usb_power_connected()) {
-        battery_percent = 100;
-        km_printf("usb_power_connected\r\n");
-        return;
-    }
+    km_analogAdcStop(BATTERY_ADC_PIN);
 
     battery_percent = new_percent;
+    battery_mv = voltage_mV_actual;
 
-    if (battery_is_start == 0)
-        return;
-
-    bhq_update_battery_percent(battery_percent, voltage_mV_actual);
+    return sta;  
 }
 
 
-void battery_percent_read_task(void)
+void battery_init(void)
+{
+    battery_is_read_flag = 1;        // 是否允许读取电量
+    battery_is_valid = 0;
+}
+
+void battery_task(void)
 { 
-
-    if (battery_timer == 0) {
-        battery_timer = timer_read32();
-        battery_read_and_update_data();
-    }
-
+    uint8_t sta = 0;
     // 定时任务，2秒执行一次
-    if (timer_elapsed32(battery_timer) > 2000) {
+    if (timer_elapsed32(battery_timer) > 2000) 
+    {
         battery_timer = timer_read32();
-        battery_read_and_update_data();
+        if(battery_is_read_flag == 1)
+        {
+            sta = battery_read_percent();
+            battery_is_valid = sta;
+        }
+        if(battery_update_ble_flag == 1 && sta == 1)
+        {
+            bhq_update_battery_percent(battery_percent, battery_mv);
+        }
     }
 }
+
 void battery_reset_timer(void)
 {
     battery_timer = timer_read32();
 }
 
-uint8_t battery_get(void)
+uint8_t battery_percent_get(void)
 {
-    return battery_percent;
+    if(battery_is_valid == 1)
+    {
+        return battery_percent;
+    }
+    else
+    {
+        return 0xff;
+    }
 }
 
-void battery_stop(void)
+/**
+ * @brief 使能电池电压读取
+ */
+void battery_enable_read(void)
 {
-    battery_is_start = 0;
+    battery_is_read_flag = 1;
 }
 
-void battery_start(void)
+/**
+ * @brief 禁用电池电压读取
+ */
+void battery_disable_read(void)
 {
-    battery_is_start = 1;
-    km_analogReadPin(BATTER_ADC_PIN);
+    battery_is_read_flag = 0;
 }
 
-void battery_init(void)
+
+/**
+ * @brief 使能电池电量更新到蓝牙
+ */
+void battery_enable_ble_update(void)
 {
-    // battery_reset_timer();
+    battery_update_ble_flag = 1;
+}
+
+/**
+ * @brief 禁用电池电量更新到蓝牙  
+ */
+void battery_disable_ble_update(void)
+{
+    battery_update_ble_flag = 0;
 }

@@ -419,6 +419,9 @@ int16_t analogReadPin(pin_t pin) {
 int16_t km_analogReadPin(pin_t pin) {
     return analogReadPin(pin);
 }
+void km_analogAdcStop(pin_t pin) {
+    analogAdcStop(pin);
+}
 
 int16_t analogReadPinAdc(pin_t pin, uint8_t adc) {
     palSetLineMode(pin, PAL_MODE_INPUT_ANALOG);

@@ -41,7 +41,7 @@ void wireless_ble_hanlde(uint8_t host_index, uint8_t advertSta,uint8_t connectSt
     {
         wt_state = WT_STATE_ADV_PAIRING;
 # if defined(KB_CHECK_BATTERY_ENABLED)
-        battery_stop();
+        battery_disable_read();
 #endif
     }
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙非配对模式
@@ -49,7 +49,7 @@ void wireless_ble_hanlde(uint8_t host_index, uint8_t advertSta,uint8_t connectSt
     {
         wt_state = WT_STATE_ADV_UNPAIRED;
 # if defined(KB_CHECK_BATTERY_ENABLED)
-        battery_stop();
+        battery_disable_read();
 #endif
     }
     // 无连接 无广播
@@ -57,19 +57,17 @@ void wireless_ble_hanlde(uint8_t host_index, uint8_t advertSta,uint8_t connectSt
     {
         wt_state = WT_STATE_DISCONNECTED;
 # if defined(KB_CHECK_BATTERY_ENABLED)
-        battery_stop();
+        battery_disable_read();
 #endif
     }
     // 蓝牙已连接
     if(connectSta == 1)
     {
 # if defined(KB_CHECK_BATTERY_ENABLED)
-        battery_start();
+        battery_enable_read();
 #endif
+        layer_clear();
         report_buffer_clear();// 已连接时，清空一下
-# if defined(KB_CHECK_BATTERY_ENABLED)
-        battery_read_and_update_data();
-#endif
         wt_state = WT_STATE_CONNECTED;
     }
     wireless_ble_hanlde_kb(host_index, advertSta, connectSta, pairingSta);
@@ -82,16 +80,17 @@ void wireless_rf24g_hanlde(uint8_t connectSta,uint8_t pairingSta)
     if(connectSta == 1)
     {
         wt_state = WT_STATE_CONNECTED;
+        layer_clear();
         report_buffer_clear();// 已连接时，清空一下
 # if defined(KB_CHECK_BATTERY_ENABLED)
-        battery_start();
+        battery_enable_read();
 #endif
     }
     else if(connectSta == 0)
     {
         wt_state = WT_STATE_DISCONNECTED;
 # if defined(KB_CHECK_BATTERY_ENABLED)
-        battery_stop();
+        battery_disable_read();
 #endif
     }
     wireless_rf24g_hanlde_kb(connectSta, pairingSta);
@@ -128,7 +127,6 @@ void BHQ_wireless_state_handle(uint8_t cmdid, uint8_t *dat)
         case KB_TRANSPORT_BLUETOOTH_2:
         case KB_TRANSPORT_BLUETOOTH_3:
         {
-
             wireless_ble_hanlde(host_index , advertSta, connectSta, pairingSta);
             break;
         }
@@ -148,12 +146,11 @@ void BHQ_wireless_state_handle(uint8_t cmdid, uint8_t *dat)
 // 模块协议处理 用户函数
 void BHQ_Protocol_Process_user(uint8_t *dat, uint16_t length) 
 {
-    uint8_t cmdid = 0;
-    // uint8_t cmd_length = 0;
-    cmdid = dat[3];
-    // cmd_length = dat[2];
     uint8_t i = 0 ;
+    uint8_t cmdid = 0;
     uint8_t hid_data[32] = {0};
+    
+    cmdid = dat[3];
     switch(cmdid)
     {
         case 0x93:  // 无线状态处理
