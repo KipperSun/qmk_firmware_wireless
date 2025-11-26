@@ -91,12 +91,12 @@ void BHQ_SendData(uint8_t *dat, uint16_t length)
     uart_transmit(dat, length);
     // int s = 0;//sdWrite(&UART_DRIVER,dat, length);
     // Debug print: show sent data
-    bhq_printf("mcu send data :");
-    for (uint16_t i = 0; i < length; i++)
-    {
-        bhq_printf("%02x ", dat[i]);
-    }
-    bhq_printf("\r\n");
+    // bhq_printf("mcu send data :");
+    // for (uint16_t i = 0; i < length; i++)
+    // {
+    //     bhq_printf("%02x ", dat[i]);
+    // }
+    // bhq_printf("\r\n");
 }
 
 bool bhq_available(void) {
@@ -451,7 +451,6 @@ void bhq_task(void)
     int16_t temp = BHQ_ReadData();
     if(temp == -1)
     {
-        // bhq_printf("not data\n");
         if(timer_elapsed32(uartTimeoutBuffer) > 100)
         {
             uartTimeoutBuffer = timer_read32();
@@ -461,7 +460,6 @@ void bhq_task(void)
                 u_sta = 0;
                 dataLength = 0;
                 memset(buf, 0, PACKET_MAX_LEN);
-                // bhq_printf("timeout\n");
             }
         }
     }
@@ -477,8 +475,6 @@ void bhq_task(void)
     wait_for_new_pkt = false;
     bytedata = (uint8_t)temp;
     uartTimeoutBuffer = timer_read32();
-    // bhq_printf("%02x \n",bytedata);
-    // return;
     switch (u_sta)
     {
         case 0:
@@ -488,7 +484,6 @@ void bhq_task(void)
                 index = 0;
                 buf[index++] = bytedata;
                 u_sta++;  
-                bhq_printf("read:[5D ");
             }
             break;
         }
@@ -498,14 +493,12 @@ void bhq_task(void)
             {
                 buf[index++] = bytedata;
                 u_sta++;  
-                bhq_printf("7E ");
             }
             break;
         }
         case 2:
         {
             buf[index++] = bytedata;
-            bhq_printf("%02x ",bytedata);
             if(dataLength == 0)
             {
                 dataLength = 2 + 1 + bytedata + 2 + 1;
@@ -517,22 +510,18 @@ void bhq_task(void)
                 {
                     if(index == dataLength && buf[dataLength - 1] == 0x5E)
                     {
-                        bhq_printf("if1\n");
                         break;
                     }
                     else
                     {
-                        bhq_printf("%d-%d-if2\n",dataLength,index);
                         return;
                     }
                 }
-                bhq_printf("%02x ",temp);
                 buf[index++] = (uint8_t)temp;
                 uartTimeoutBuffer = timer_read32();
             }
             if(index == dataLength && buf[dataLength - 1] == 0x5E)
             {
-                bhq_printf("]\r\n");
                 if(bhkVerify(buf, index) == 0x00)
                 {
                     BHQ_Protocol_Process(buf, index);

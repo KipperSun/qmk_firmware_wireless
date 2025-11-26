@@ -50,6 +50,7 @@ void wireless_ble_hanlde(uint8_t host_index, uint8_t advertSta,uint8_t connectSt
         wt_state = WT_STATE_ADV_UNPAIRED;
 # if defined(KB_CHECK_BATTERY_ENABLED)
         battery_disable_read();
+        battery_disable_ble_update();
 #endif
     }
     // 无连接 无广播
@@ -58,6 +59,7 @@ void wireless_ble_hanlde(uint8_t host_index, uint8_t advertSta,uint8_t connectSt
         wt_state = WT_STATE_DISCONNECTED;
 # if defined(KB_CHECK_BATTERY_ENABLED)
         battery_disable_read();
+        battery_disable_ble_update();
 #endif
     }
     // 蓝牙已连接
@@ -65,6 +67,7 @@ void wireless_ble_hanlde(uint8_t host_index, uint8_t advertSta,uint8_t connectSt
     {
 # if defined(KB_CHECK_BATTERY_ENABLED)
         battery_enable_read();
+        battery_enable_ble_update();
 #endif
         layer_clear();
         report_buffer_clear();// 已连接时，清空一下
@@ -84,6 +87,7 @@ void wireless_rf24g_hanlde(uint8_t connectSta,uint8_t pairingSta)
         report_buffer_clear();// 已连接时，清空一下
 # if defined(KB_CHECK_BATTERY_ENABLED)
         battery_enable_read();
+        battery_enable_ble_update();
 #endif
     }
     else if(connectSta == 0)
@@ -91,6 +95,7 @@ void wireless_rf24g_hanlde(uint8_t connectSta,uint8_t pairingSta)
         wt_state = WT_STATE_DISCONNECTED;
 # if defined(KB_CHECK_BATTERY_ENABLED)
         battery_disable_read();
+        battery_disable_ble_update();
 #endif
     }
     wireless_rf24g_hanlde_kb(connectSta, pairingSta);

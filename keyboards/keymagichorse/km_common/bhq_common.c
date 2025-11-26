@@ -218,13 +218,14 @@ void bhq_switch_host_task(void){
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
 // 电池回调函数
-__attribute__((weak)) void bhq_bat_low_handle_kb(void){}
+__attribute__((weak)) void bhq_bat_state_handle_kb(uint8_t bat_sta){}
 void bhq_bat_low_check_task(void)
 {
     if (usb_power_connected()) {
         if (bhq_bat_low_sta != 0) {
             bhq_bat_low_sta = 0;
             bluetooth_enabled();  // USB供电时确保蓝牙开启
+            bhq_bat_state_handle_kb(bhq_bat_low_sta); 
         }
         return;
     }
@@ -233,16 +234,14 @@ void bhq_bat_low_check_task(void)
         if (bhq_bat_low_sta != 2) {
             bhq_bat_low_sta = 2;
             bluetooth_disabled();         // 严重低电量时禁用蓝牙
-            battery_disable_ble_update();
-            bhq_bat_low_handle_kb(); // 5%严重低电量
+            bhq_bat_state_handle_kb(bhq_bat_low_sta); // 5%严重低电量
         }
     } 
     else if (battery_percent <= 10) {
         if (bhq_bat_low_sta != 1) {
             bhq_bat_low_sta = 1;
-            bluetooth_disabled();         // 严重低电量时禁用蓝牙
-            battery_disable_ble_update();
-            bhq_bat_low_handle_kb(); // 10%低电量
+            bluetooth_enabled(); 
+            bhq_bat_state_handle_kb(bhq_bat_low_sta); // 10%低电量
         }
     } 
     else {
@@ -250,6 +249,7 @@ void bhq_bat_low_check_task(void)
             bhq_bat_low_sta = 0; // 电量恢复正常
             bluetooth_enabled(); // 确保蓝牙开启
             battery_enable_ble_update();
+            bhq_bat_state_handle_kb(bhq_bat_low_sta); 
         }
     }
 }

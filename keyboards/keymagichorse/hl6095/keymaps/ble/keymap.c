@@ -34,10 +34,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_LCTL, KC_LGUI, KC_LALT,  KC_SPC,   KC_SPC,  KC_SPC,                    KC_SPC,    MO(1),    KC_RCTL,    KC_LEFT,  KC_DOWN, KC_RIGHT),
   [1] = LAYOUT_all(
     KC_GRV , KC_F1,   KC_F2,   KC_F3,    KC_F4,   KC_F5,   KC_F6,   KC_F7,    KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_TRNS, KC_DEL,
-    KC_TRNS, BL_SW_0, BL_SW_1, BL_SW_2,  RF_TOG, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+    KC_TRNS, BLE_SW1, BLE_SW2, BLE_SW3,  RF_TOG, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, USB_TOG, NK_TOGG, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_BRIU, KC_TRNS,
-    KC_TRNS, GU_TOGG,   KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, KC_TRNS, KC_VOLD, KC_BRID, KC_VOLU),
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_BRIU, KC_TRNS,
+    KC_TRNS, GU_TOGG, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, KC_TRNS, KC_VOLD, KC_BRID, KC_VOLU),
   [2] = LAYOUT_all(
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
@@ -57,96 +57,122 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     return process_record_bhq(keycode, record);
 }
 
+bool via_command_kb(uint8_t *data, uint8_t length) {
+    return via_command_bhq(data, length);
+}
 
-#if defined(RGBLIGHT_ENABLE) 
 //  每个通道的颜色 以及大写按键的颜色
-const rgblight_segment_t PROGMEM bt_conn1[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_BLUE} );      // 通道1：蓝色
-const rgblight_segment_t PROGMEM bt_conn2[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_TURQUOISE} ); // 通道2：蓝绿色（青绿）
-const rgblight_segment_t PROGMEM bt_conn3[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_ORANGE} );    // 通道3：橙色
-const rgblight_segment_t PROGMEM caps_lock_[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_PURPLE} );    // 大小写：紫色
-const rgblight_segment_t PROGMEM bat_low_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_RED} );      // 低电量：红色
+const rgblight_segment_t PROGMEM bt_conn1[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_BLUE} );        // 通道1：蓝色
+const rgblight_segment_t PROGMEM bt_conn2[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_TURQUOISE} );   // 通道2：蓝绿色（青绿）
+const rgblight_segment_t PROGMEM bt_conn3[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_ORANGE} );      // 通道3：橙色
+const rgblight_segment_t PROGMEM caps_lock_[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_PURPLE} );      // 大小写：紫色
+const rgblight_segment_t PROGMEM bat_low_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_RED} );        // 低电量：红色
+const rgblight_segment_t PROGMEM rf24g_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_YELLOW} );       // 24g：黄色
 
 const rgblight_segment_t* const PROGMEM _rgb_layers[] = RGBLIGHT_LAYERS_LIST( 
-    bt_conn1, bt_conn2, bt_conn3, caps_lock_, bat_low_led
+    bt_conn1, bt_conn2, bt_conn3, caps_lock_, bat_low_led, rf24g_led
 );
 
 void rgb_adv_unblink_all_layer(void) {
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < 5; i++) {
         rgblight_unblink_layer(i);
     }
 }
 
-void bhq_set_lowbat_led(bool on)
-{
-    rgb_adv_unblink_all_layer();
-    rgblight_set_layer_state(4, on);
-}
+
 
 bool led_update_user(led_t led_state) {
     // 如果当前是USB连接，或者是蓝牙/2.4G连接且已配对连接状态
     if( (transport_get() > KB_TRANSPORT_USB && wireless_get() == WT_STATE_CONNECTED) || ( usb_power_connected() == true && transport_get() == KB_TRANSPORT_USB))
     {
         rgblight_set_layer_state(3, led_state.caps_lock);
-        km_printf("led_update_user\r\n");
     }
     return true;
 }
+
 
 // 无线蓝牙回调函数
 void wireless_ble_hanlde_kb(uint8_t host_index,uint8_t advertSta,uint8_t connectSta,uint8_t pairingSta)
 {
     rgblight_disable();
     rgb_adv_unblink_all_layer();
-    km_printf("wireless_ble_hanlde_kb->host_index: %d\r\n",host_index);
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙配对模式
     if(connectSta != 1 && advertSta == 1 && pairingSta == 1)
     {
         // 这里第一个参数使用host_index正好对应_rgb_layers的索引
         rgblight_blink_layer_repeat(host_index , 500, 50);
-        km_printf("if 1\n");
     }
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙非配对模式
     else if(connectSta != 1 && advertSta == 1 && pairingSta == 0)
     {
         rgblight_blink_layer_repeat(host_index , 2000, 50);
-        km_printf("if 2\n");
     }
     // 蓝牙已连接
     if(connectSta == 1)
     {
-        report_buffer_clear();
-        layer_clear();
         rgblight_blink_layer_repeat(host_index , 200, 2);
-        km_printf("if 3\n");
     }
 }
+// 24g回调函数
 void wireless_rf24g_hanlde_kb(uint8_t connectSta,uint8_t pairingSta)
 {
     rgblight_disable_noeeprom();
     rgb_adv_unblink_all_layer();
     if(connectSta == 1)
     {
-        report_buffer_clear();
-        layer_clear();
-        rgblight_blink_layer_repeat(3 , 200, 2);
-        km_printf("if 3\n");
+        rgblight_blink_layer_repeat(5 , 200, 2);
     }
 }
+
+// 电量回调函数 红灯 慢闪
+void bhq_bat_state_handle_kb(uint8_t bat_sta)
+{
+    switch (bat_sta)
+    {
+        case 0 :
+        {
+            rgb_adv_unblink_all_layer();
+            break;
+        }
+        case 1 :
+        case 2 :
+        {
+            rgb_adv_unblink_all_layer();
+            rgblight_blink_layer_repeat(4 , 200, 255);
+            break;
+        }
+    }
+}
+// 2812 电源开关
+void ws2812_set_power(uint8_t on)
+{
+    gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
+    if(on)  // 开
+    {
+#if WS2812_POWER_ON_LEVEL == 0
+        gpio_write_pin_low(WS2812_POWER_PIN);
+#else
+        gpio_write_pin_high(WS2812_POWER_PIN);
 #endif
+    }
+    else    // 关
+    {
+#if WS2812_POWER_ON_LEVEL == 0
+        gpio_write_pin_high(WS2812_POWER_PIN);
+#else
+        gpio_write_pin_low(WS2812_POWER_PIN);
+#endif
+    }
+}
 
 // After initializing the peripheral
 void keyboard_post_init_kb(void)
 {
-#if defined(RGBLIGHT_WS2812)
     ws2812_init();
-    gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
-    gpio_write_pin_low(WS2812_POWER_PIN);
-#endif
-#if defined(RGBLIGHT_ENABLE) 
+    ws2812_set_power(1);
+
     rgblight_disable();
-    rgblight_layers = _rgb_layers;
-#endif
-    rgblight_disable();
+    rgblight_layers = _rgb_layers;  // 层灯光赋值
     rgb_adv_unblink_all_layer();
 }
 
@@ -154,37 +180,20 @@ void keyboard_post_init_kb(void)
 // 低功耗外围设备电源控制
 void lpm_device_power_open(void) 
 {
-#if defined(RGBLIGHT_WS2812) && defined(RGBLIGHT_ENABLE) 
     // ws2812电源开启
     ws2812_init();
-    gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
-    gpio_write_pin_low(WS2812_POWER_PIN);
-#endif
+    ws2812_set_power(1);
 
 }
 //关闭外围设备电源
 void lpm_device_power_close(void) 
 {
-#if defined(RGBLIGHT_WS2812) && defined(RGBLIGHT_ENABLE) 
     // ws2812电源关闭
     rgblight_setrgb_at(0, 0, 0, 0);
-    gpio_set_pin_output(WS2812_POWER_PIN);        // ws2812 power
-    gpio_write_pin_high(WS2812_POWER_PIN);
-
+    ws2812_set_power(0);
     gpio_set_pin_output(WS2812_DI_PIN);        // ws2812 DI Pin
     gpio_write_pin_low(WS2812_DI_PIN);
-#endif
 }
-
-
-
-__attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
-    return via_command_bhq(data, length);
-}
-
-
-
-
 
 
 

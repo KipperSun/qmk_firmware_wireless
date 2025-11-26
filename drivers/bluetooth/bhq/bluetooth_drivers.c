@@ -29,11 +29,11 @@ void bluetooth_task(void) {
     bluetooth_bhq_task();
 }
 
-void bluetooth_enable(void) {
+void bluetooth_enabled(void) {
     is_bluetooth_enabled = true;
 }
 
-void bluetooth_disable(void) {
+void bluetooth_disabled(void) {
     is_bluetooth_enabled = false;
 }
 

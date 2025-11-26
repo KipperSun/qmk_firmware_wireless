@@ -61,8 +61,7 @@
 #endif
 
 void bhq_set_lowbat_led(bool on);
-
-void bhq_bat_low_handle_kb(void);
+void bhq_bat_state_handle_kb(uint8_t bat_sta);
 
 
 void bhq_common_init(void);

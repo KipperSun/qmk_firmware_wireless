@@ -104,7 +104,7 @@ uint8_t battery_read_percent(void)
 
     battery_percent = new_percent;
     battery_mv = voltage_mV_actual;
-
+    km_printf("bat(mV):%d -> %d\n",battery_mv,battery_percent);
     return sta;  
 }
 
@@ -131,6 +131,7 @@ void battery_task(void)
         {
             bhq_update_battery_percent(battery_percent, battery_mv);
         }
+        km_printf("%d %d\n",battery_is_read_flag,battery_update_ble_flag);
     }
 }
 
