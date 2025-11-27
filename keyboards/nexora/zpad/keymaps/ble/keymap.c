@@ -350,7 +350,7 @@ void keyboard_post_init_kb(void)
     gpio_set_pin_output(BHQ_INT_PIN);
     gpio_write_pin_high(BHQ_INT_PIN);
 
-#   if defined(KM_DEBUG)
+#   if defined(KB_DEBUG)
     km_printf_init();
     km_printf("hello rtt log1111111\r\n");
 #   endif

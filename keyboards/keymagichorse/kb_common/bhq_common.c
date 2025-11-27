@@ -45,7 +45,7 @@ bool usb_power_connected(void) {
 
 void bhq_common_init(void)
 {
-#   if defined(KM_DEBUG)
+#   if defined(KB_DEBUG)
     km_printf_init();
     km_printf("hello bhq debug \r\n");
 #   endif

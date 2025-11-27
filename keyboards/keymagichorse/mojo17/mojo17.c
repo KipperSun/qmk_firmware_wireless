@@ -9,7 +9,7 @@
 #   include "lpm.h"
 #endif
 
-#if defined(KM_DEBUG)
+#if defined(KB_DEBUG)
 #   include "km_printf.h"
 #endif
 
@@ -20,7 +20,7 @@ void board_init(void) {
 #   endif
 #endif
 
-#   if defined(KM_DEBUG)
+#   if defined(KB_DEBUG)
     km_printf_init();
     km_printf("hello rtt log1111111\r\n");
 #   endif

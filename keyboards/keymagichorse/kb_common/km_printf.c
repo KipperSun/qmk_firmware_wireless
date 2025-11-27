@@ -16,17 +16,17 @@
 #include <stdarg.h>
 #include "km_printf.h"
 
-#if defined(KM_DEBUG_RTT)
+#if defined(KB_DEBUG_RTT)
     #include "SEGGER_RTT.h"
-#elif defined(KM_DEBUG_UART_BHQ)
+#elif defined(KB_DEBUG_UART_BHQ)
     #include "uart.h"
 #endif
 
 void km_printf_init(void)
 {
-#if defined(KM_DEBUG_RTT)
+#if defined(KB_DEBUG_RTT)
     SEGGER_RTT_Init();
-#elif defined(KM_DEBUG_UART_BHQ)
+#elif defined(KB_DEBUG_UART_BHQ)
     // BHQ 驱动已含
 #endif
 
@@ -35,15 +35,15 @@ void km_printf_init(void)
 
 void km_putchar(char c)
 {
-#if defined(KM_DEBUG_RTT)
+#if defined(KB_DEBUG_RTT)
     SEGGER_RTT_printf(0, "%c", c);
-#elif defined(KM_DEBUG_UART_BHQ)
+#elif defined(KB_DEBUG_UART_BHQ)
     uart_write(c);
 #endif
 }
 
 int km_printf(const char* format, ...) {
-#if defined(KM_DEBUG)
+#if defined(KB_DEBUG)
     va_list args;
     va_start(args, format);
     
