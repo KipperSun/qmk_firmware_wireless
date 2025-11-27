@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "battery.h"
-#include "analog.h"
+#include "km_analog.h"
 #include "bhq.h"
 #include "bhq_common.h"
 #include "wireless.h"
@@ -49,58 +49,58 @@ void battery_read_and_update_data(void)
     uint32_t sum   = 0;
     uint16_t max_v = 0;
     uint16_t min_v = 0xFFFF;
-    const uint8_t  NUM_SAMPLES  =   10;
-    const uint8_t  ADC_DEADBAND  =  5;
-    static uint16_t last_adc = 0;
+    const uint8_t NUM_SAMPLES = 10;
 
-    analogReadPin(BATTER_ADC_PIN);
-    wait_us(50);          
-    /* 采样 NUM_SAMPLES 次 */
+    km_analogReadPin(BATTER_ADC_PIN);
+    wait_us(50);
+
     for (uint8_t i = 0; i < NUM_SAMPLES; i++) {
-        uint16_t v = analogReadPin(BATTER_ADC_PIN);
-
-        sum   += v;
+        uint16_t v = km_analogReadPin(BATTER_ADC_PIN) >> 2;    // 20251015：这里使用km_analog.c没有缩放，所以这里缩放
+        if (v == 0) {
+            return;
+        }
+        sum += v;
         if (v > max_v) max_v = v;
         if (v < min_v) min_v = v;
-
     }
 
-    /* 去掉最大/最小值后求平均 */
+    /* 去极值平均 */
     sum -= (uint32_t)max_v + (uint32_t)min_v;
-    uint16_t new_adc = (uint16_t)(sum / (NUM_SAMPLES - 2));
+    uint16_t adc = (uint16_t)(sum / (NUM_SAMPLES - 2));
 
-    /* 死区滤波：只有跳出 ±5 LSB 才更新 */
-    if (new_adc > last_adc + ADC_DEADBAND ||
-        new_adc < last_adc - ADC_DEADBAND) {
-        last_adc = new_adc;
-    }
-    uint16_t adc = last_adc;
+    /* 转换为电压（mV） */
+    uint16_t voltage_mV_Fenya  = (adc * 3300) / 1023;
+    uint16_t voltage_mV_actual = voltage_mV_Fenya * (1 + (BAT_R_UPPER / BAT_R_LOWER));
 
-    uint16_t voltage_mV_Fenya = (adc * 3300) / 1023;
-    uint16_t voltage_mV_actual = voltage_mV_Fenya  * (1 + (BAT_R_UPPER / BAT_R_LOWER));
-
-    // 计算当前电压对应的百分比
+    /* 计算电量百分比 */
     uint8_t new_percent = calculate_battery_percentage(voltage_mV_actual);
-    voltage_mV_actual = voltage_mV_actual;  // 
-    km_printf("adc:%d   fymv:%d  sjmv:%d  bfb:%d  \r\n",
-    adc,voltage_mV_Fenya,voltage_mV_actual,calculate_battery_percentage(voltage_mV_actual));
-    km_printf("adcState:%d\r\n",ADCD1.state);
+
+    /* 5% 一档 */
+    new_percent = ((new_percent + 2) / 5) * 5;
+    if (new_percent > 100) new_percent = 100;
+
+    km_printf("adc:%d fymv:%d sjmv:%d bfb:%d\r\n",
+              adc, voltage_mV_Fenya, voltage_mV_actual, new_percent);
+    km_printf("adcState:%d\r\n", ADCD1.state);
+
     analogAdcStop(BATTER_ADC_PIN);
-    // 如果USB插入
-    if (usb_power_connected()) 
-    {
+
+    /* USB 供电时固定 100% */
+    if (usb_power_connected()) {
         battery_percent = 100;
         km_printf("usb_power_connected\r\n");
-        return;  // 不上传电量
-    }
-    battery_percent = new_percent;
-
-    if(battery_is_start == 0)
-    {
         return;
     }
-    bhq_update_battery_percent(battery_percent, voltage_mV_actual);  // 上报电量
+
+    battery_percent = new_percent;
+
+    if (battery_is_start == 0)
+        return;
+
+    bhq_update_battery_percent(battery_percent, voltage_mV_actual);
 }
+
+
 void battery_percent_read_task(void)
 { 
 
@@ -133,6 +133,7 @@ void battery_stop(void)
 void battery_start(void)
 {
     battery_is_start = 1;
+    km_analogReadPin(BATTER_ADC_PIN);
 }
 
 void battery_init(void)

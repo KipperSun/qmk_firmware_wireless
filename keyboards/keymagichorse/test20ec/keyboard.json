@@ -18,7 +18,7 @@
     },
     "matrix_pins": {
         "cols": ["NO_PIN", "NO_PIN", "NO_PIN", "NO_PIN", "NO_PIN"],
-        "rows": ["A9", "A8", "B15", "B14"]
+        "rows": ["A10", "A8", "B15", "B14"]
     },
     "diode_direction": "ROW2COL",
     "layouts": {

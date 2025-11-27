@@ -67,7 +67,9 @@ void wireless_ble_hanlde(uint8_t host_index, uint8_t advertSta,uint8_t connectSt
         battery_start();
 #endif
         report_buffer_clear();// 已连接时，清空一下
+# if defined(KB_CHECK_BATTERY_ENABLED)
         battery_read_and_update_data();
+#endif
         wt_state = WT_STATE_CONNECTED;
     }
     wireless_ble_hanlde_kb(host_index, advertSta, connectSta, pairingSta);
