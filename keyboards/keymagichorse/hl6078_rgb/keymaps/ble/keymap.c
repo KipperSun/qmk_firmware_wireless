@@ -15,36 +15,31 @@
  */
 #include QMK_KEYBOARD_H
 #include "config.h"
-
 #include "ws2812.h"
 #include "color.h"
-
 #include "bhq_common.h"
 #include "wireless.h"
-#include "transport.h"
-#include "report_buffer.h"
+
+#if defined (RGB_MATRIX_CUSTOM_BATTERY_EFFECT)
+#   include "rgb_matrix_battery_effect.h"
+#endif
+
+# if defined(RGB_MATRIX_CUSTOM_BLINK_EFFECT)
+#   include "rgb_matrix_blink_effect.h"
+#endif
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
 #endif
 
-#   if defined(KB_LPM_ENABLED)
-
-#endif
 // 临时变量，用于临时存放矩阵灯是否开启
 uint8_t is_sleep = 0;
 uint8_t rgb_matrix_is_enabled_temp_v = 0;
 
-// 是否显示rgb电量指示灯
-uint8_t rgb_bat_show_flag  = 0;
-uint16_t rgb_bat_led_idx[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 #define RGB_BAT      QK_USER_1       
-// 低电量提示
-uint8_t rgb_bat_low_flag = 0;
 
-// 唤醒后延时点亮 RGB 的标志位
+// 延时点亮 RGB 的标志位
 static uint8_t rgb_matrix_delay_open_flag = 0;
-// 记录唤醒时间
 static uint32_t rgb_matrix_delay_open_timer = 0;
 
 
@@ -79,7 +74,16 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if(keycode == RGB_BAT)
     {
-        rgb_bat_show_flag  = record->event.pressed;
+#if defined (RGB_MATRIX_CUSTOM_BATTERY_EFFECT)
+        if(record->event.pressed)
+        {
+            rgb_matrix_battery_effect_enabled();
+        }
+        else
+        {
+            rgb_matrix_battery_effect_disabled();
+        }
+#endif
     }
     return process_record_bhq(keycode, record);
 }
@@ -115,6 +119,15 @@ void ws2812_set_power(uint8_t on)
 // After initializing the peripheral
 void keyboard_post_init_kb(void)
 {
+    
+# if defined(RGB_MATRIX_CUSTOM_BLINK_EFFECT)
+    rgb_matrix_blink_effect_init();
+#endif
+
+#if defined (RGB_MATRIX_CUSTOM_BATTERY_EFFECT)
+    rgb_matrix_battery_effect_init();
+#endif
+
     rgb_matrix_delay_open_flag = 1;
     ws2812_set_power(1);
     rgb_matrix_is_enabled_temp_v = rgb_matrix_is_enabled();
@@ -166,60 +179,6 @@ void lpm_device_power_close(void)
 // HSV_BLUE        // 蓝牙 蓝色
 // HSV_PURPLE      // 大小写：紫色
 // HSV_RED         // 低电量：红色
-typedef struct {
-    uint8_t index;       // LED 索引
-    uint16_t blink_nums;      // 剩余闪烁次数（0 = 不闪）
-    uint16_t on_time;    // 亮的时长 (ms)
-    uint16_t off_time;   // 灭的时长 (ms)
-
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
-
-    // 内部状态
-    uint8_t active;      // 是否激活
-    uint8_t is_on;       // 当前亮灭状态
-    uint16_t counter;    // 当前阶段计数器
-} user_blink_task_t;
-
-#define MAX_BLINK_TASKS 2   // 最多同时 2 个闪烁任务
-static user_blink_task_t blink_tasks[MAX_BLINK_TASKS];
-void add_blink_task(int index, uint8_t red, uint8_t green, uint8_t blue, uint16_t blink_nums, uint16_t on_ms, uint16_t off_ms) {
-    if(blink_nums == 0)
-    {
-        blink_nums = blink_nums;
-    }
-    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
-        if (!blink_tasks[i].active) {
-            blink_tasks[i].index        = index;
-            blink_tasks[i].blink_nums   = blink_nums;
-            blink_tasks[i].on_time      = on_ms;
-            blink_tasks[i].off_time     = off_ms;
-            blink_tasks[i].red          = red;
-            blink_tasks[i].green        = green;
-            blink_tasks[i].blue         = blue;
-            blink_tasks[i].active       = 1;
-            blink_tasks[i].is_on        = 1;
-            blink_tasks[i].counter      = 0;
-            break;
-        }
-    }
-}
-void del_all_blink_task(void)
-{
-    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
-        blink_tasks[i].index        = 0;
-        blink_tasks[i].blink_nums   = 0;
-        blink_tasks[i].on_time      = 0;
-        blink_tasks[i].off_time     = 0;
-        blink_tasks[i].red          = 0;
-        blink_tasks[i].green        = 0;
-        blink_tasks[i].blue         = 0;
-        blink_tasks[i].active       = 0;
-        blink_tasks[i].is_on        = 0;
-        blink_tasks[i].counter      = 0;
-    }
-}
 
 void rgb_matrix_all_black(void)
 {
@@ -230,6 +189,7 @@ void rgb_matrix_all_black(void)
 }
 // 矩阵灯任务
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    // todo：搞了两坨是干啥，晚上优化掉试试
     if (rgb_matrix_delay_open_flag == 1) {
         rgb_matrix_delay_open_flag = 2;
         rgb_matrix_delay_open_timer = timer_read32();
@@ -273,61 +233,14 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
 
 // ************** 闪烁rgb灯逻辑 **************
-    for (int i = 0; i < MAX_BLINK_TASKS; i++) {
-        if (!blink_tasks[i].active) continue;
-        // 时间推进
-        blink_tasks[i].counter++;
-        if (blink_tasks[i].is_on) {
-            if (blink_tasks[i].counter >= blink_tasks[i].on_time) {
-                blink_tasks[i].is_on = 0;
-                blink_tasks[i].counter = 0;
-                if (blink_tasks[i].blink_nums > 0 && --blink_tasks[i].blink_nums == 0) {
-                    blink_tasks[i].active = 0;
-                }
-            }
-        } else {
-            if (blink_tasks[i].counter >= blink_tasks[i].off_time) {
-                blink_tasks[i].is_on = 1;
-                blink_tasks[i].counter = 0;
-            }
-        }
-        if (blink_tasks[i].active && blink_tasks[i].is_on) {
-            rgb_matrix_set_color(blink_tasks[i].index, blink_tasks[i].red, blink_tasks[i].green, blink_tasks[i].blue); 
-        } else {
-            rgb_matrix_set_color(blink_tasks[i].index, 0, 0, 0);  
-        }
-    }
+# if defined(RGB_MATRIX_CUSTOM_BLINK_EFFECT)
+    rgb_matrix_blink_effect_hook(led_min, led_max);
+#endif
 // ************** 闪烁rgb灯逻辑 **************
 
 // ************** 显示电量灯条 逻辑 **************
-
-# if defined(KB_CHECK_BATTERY_ENABLED)
-    if(rgb_bat_show_flag  == 1)   
-    {
-        rgb_matrix_all_black();
-        uint8_t bat_led_count = battery_percent_get() / 10;
-        if (battery_percent_get() > 0 && bat_led_count == 0) {
-            bat_led_count = 1;  
-        }
-        if (bat_led_count > 10) {
-            bat_led_count = 10; 
-        }
-        uint8_t r = 0, g = 0, b = 0;
-        if (battery_percent_get() < 30) {
-            r = 0xFF; g = 0x00; b = 0x00;   // 红色（低电量）
-        } else if (battery_percent_get() < 70) {
-            r = 0xFF; g = 0xFF; b = 0x00;   // 黄色（中电量）
-        } else {
-            r = 0x00; g = 0xFF; b = 0x00;   // 绿色（高电量）
-        }
-        for (size_t j = 0; j < bat_led_count; j++) {
-            uint8_t led_index = rgb_bat_led_idx[j];
-            if (led_index < RGB_MATRIX_LED_COUNT) {
-                rgb_matrix_set_color(led_index, r, g, b);
-            }
-        }
-        return false;   
-    }
+#if defined (RGB_MATRIX_CUSTOM_BATTERY_EFFECT)
+    rgb_matrix_battery_effect_hook(led_min, led_max);
 #endif
 // ************** 显示电量灯条 逻辑 **************
     return false;
@@ -336,46 +249,52 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 // 无线蓝牙回调函数
 void wireless_ble_hanlde_kb(uint8_t host_index,uint8_t advertSta,uint8_t connectSta,uint8_t pairingSta)
 {
-    del_all_blink_task();
+# if defined(RGB_MATRIX_CUSTOM_BLINK_EFFECT)
+    rgb_matrix_all_unblink();
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙配对模式
     if(connectSta != 1 && advertSta == 1 && pairingSta == 1)
     {
         // 这里第一个参数使用host_index正好对应_rgb_layers的索引
-        add_blink_task(17 + host_index, RGB_BLUE, 0, 100, 100);
+        rgb_matrix_blink(17 + host_index, RGB_BLUE, 0, 100, 100);
     }
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙非配对模式
     else if(connectSta != 1 && advertSta == 1 && pairingSta == 0)
     {
-        add_blink_task(17 + host_index, RGB_BLUE, 0, 200, 300);
+        rgb_matrix_blink(17 + host_index, RGB_BLUE, 0, 200, 300);
     }
     else if(connectSta != 1 && advertSta == 0 && pairingSta == 0)
     {
-        del_all_blink_task();
+        rgb_matrix_all_unblink();
     }
     // 蓝牙已连接
     if(connectSta == 1)
     {
-        add_blink_task(17 + host_index, RGB_BLUE, 5, 50, 50);
+        rgb_matrix_blink(17 + host_index, RGB_BLUE, 5, 50, 50);
     }
+#endif
 }
 // 24g函数回调
 void wireless_rf24g_hanlde_kb(uint8_t connectSta,uint8_t pairingSta)
 {
+# if defined(RGB_MATRIX_CUSTOM_BLINK_EFFECT)
     if(connectSta == 1)
     {
-        add_blink_task(20, RGB_BLUE, 5, 50, 50);
+        rgb_matrix_blink(20, RGB_BLUE, 5, 50, 50);
     }
+#endif
 }
 
 // 电量回调函数 红灯 慢闪
 void battery_percent_changed_kb(uint8_t level)
 {
-    del_all_blink_task();
+# if defined(RGB_MATRIX_CUSTOM_BLINK_EFFECT)
+    rgb_matrix_all_unblink();
     if(level <= 10)
     {
-        del_all_blink_task();
-        add_blink_task(0, RGB_RED, 255, 500, 500);
+        rgb_matrix_all_unblink();
+        rgb_matrix_blink(0, RGB_RED, 255, 500, 500);
     }
+#endif
 }
 
 // 将未使用的引脚设置为输入模拟 

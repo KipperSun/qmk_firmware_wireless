@@ -68,3 +68,26 @@ ifeq ($(strip $(KM_ANALOG_ENABLED)), yes)
     OPT_DEFS += -DHAL_USE_ADC=TRUE
     SRC += kb_common/km_analog.c
 endif
+
+ifeq ($(strip $(RGB_MATRIX_CUSTOM_BLINK_EFFECT)), yes)
+ifeq ($(strip $(RGB_MATRIX_ENABLE)), no)
+  $(error RGB_MATRIX_CUSTOM_BLINK_EFFECT depends on the RGB_MATRIX_ENABLE)
+endif
+    OPT_DEFS += -DRGB_MATRIX_CUSTOM_BLINK_EFFECT
+    VPATH += keyboards/keymagichorse/kb_common/rgb_matrix_custom_effect/rgb_matrix_blink_effect
+    SRC += kb_common/rgb_matrix_custom_effect/rgb_matrix_blink_effect/rgb_matrix_blink_effect.c
+endif
+
+ifeq ($(strip $(RGB_MATRIX_CUSTOM_BATTERY_EFFECT)), yes)
+ifeq ($(strip $(RGB_MATRIX_ENABLE)), no)
+  $(error RGB_MATRIX_CUSTOM_BATTERY_EFFECT depends on the RGB_MATRIX_ENABLE)
+endif
+ifeq ($(strip $(KB_CHECK_BATTERY_ENABLED)), no)
+  $(error RGB_MATRIX_CUSTOM_BATTERY_EFFECT depends on the KB_CHECK_BATTERY_ENABLED)
+endif
+    OPT_DEFS += -DRGB_MATRIX_CUSTOM_BATTERY_EFFECT
+    VPATH += keyboards/keymagichorse/kb_common/rgb_matrix_custom_effect/rgb_matrix_battery_effect
+    SRC += kb_common/rgb_matrix_custom_effect/rgb_matrix_battery_effect/rgb_matrix_battery_effect.c
+endif
+
+
