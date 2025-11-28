@@ -33,6 +33,10 @@ __attribute__((weak))  void battery_percent_changed_user(uint8_t level){}
 __attribute__((weak))  void battery_percent_changed_kb(uint8_t level){}
 void battery_percent_changed(uint8_t level)
 {
+    if(battery_update_ble_flag == 1)
+    {
+        bhq_update_battery_percent(battery_percent, battery_mv);
+    }
     battery_percent_changed_user(level);
     battery_percent_changed_kb(level);
 }
@@ -68,6 +72,8 @@ uint8_t battery_read_percent(void)
     uint16_t max_v = 0;
     uint16_t min_v = UINT16_MAX;
     const uint8_t NUM_SAMPLES = 10;
+    static uint8_t last_sample = 0xff;        // 改为uint8_t，因为存储的是百分比
+    static uint8_t stable_count = 0;
 
     // ADC采样
     km_analogReadPin(BATTERY_ADC_PIN);
@@ -100,7 +106,6 @@ uint8_t battery_read_percent(void)
 
     /* 转换为电压（mV）- 修复精度问题 */
     uint16_t voltage_mV_Fenya = (adc * 3300UL) / 1023;
-    
     uint16_t voltage_mV_actual = (voltage_mV_Fenya * (BAT_R_UPPER + BAT_R_LOWER)) / BAT_R_LOWER;
 
     /* 计算电量百分比 */
@@ -111,18 +116,32 @@ uint8_t battery_read_percent(void)
     if (new_percent > 100) new_percent = 100;
 
     km_analogAdcStop(BATTERY_ADC_PIN);
-
-    if(new_percent != battery_percent)
-    {
-        battery_percent_changed(battery_percent);
-        battery_percent = new_percent;
-        battery_mv = voltage_mV_actual;
-        km_printf("bat(mV):%d -> %d\n",battery_mv,battery_percent);
+    
+    // 消抖逻辑
+    if (new_percent == last_sample) {
+        stable_count++;
+        if(stable_count > 254)  // 避免临界值
+        {
+            stable_count = 254;
+        }
+        km_printf("bat stable++: %d\n", stable_count);
+    } else {
+        km_printf("bat %d!=%d\n", last_sample, new_percent);
+        stable_count = 1;
+        last_sample = new_percent;
     }
+    
+    if (stable_count >= 6) {
+        battery_mv = voltage_mV_actual;
+        battery_percent = new_percent;
+
+        km_printf("stable success: %dmV -> %d\n", battery_mv, battery_percent);
+        battery_percent_changed(battery_percent);
+        // stable_count = 0; 
+    }
+    
     return sta;  
 }
-
-
 void battery_init(void)
 {
     battery_is_read_flag = 1;        // 是否允许读取电量
@@ -133,17 +152,13 @@ void battery_task(void)
 { 
     uint8_t sta = 0;
     // 定时任务，2秒执行一次
-    if (timer_elapsed32(battery_timer) > 2000) 
+    if (timer_elapsed32(battery_timer) > 500) 
     {
         battery_timer = timer_read32();
         if(battery_is_read_flag == 1)
         {
             sta = battery_read_percent();
             battery_is_valid = sta;
-        }
-        if(battery_update_ble_flag == 1 && sta == 1)
-        {
-            bhq_update_battery_percent(battery_percent, battery_mv);
         }
         km_printf("%d %d\n",battery_is_read_flag,battery_update_ble_flag);
     }
