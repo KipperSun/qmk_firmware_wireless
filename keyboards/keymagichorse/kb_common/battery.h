@@ -55,6 +55,9 @@ void battery_task(void);
 void battery_reset_timer(void);
 uint8_t battery_percent_get(void);
 
+__attribute__((weak))  void battery_percent_changed_user(uint8_t level);
+__attribute__((weak))  void battery_percent_changed_kb(uint8_t level);
+
 // 控制函数
 void battery_enable_read(void);
 void battery_disable_read(void);

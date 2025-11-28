@@ -27,6 +27,17 @@ uint32_t battery_timer = 0;     // 电池采样计时
 uint8_t battery_update_ble_flag = 0;    // 是否更新电量百分比到蓝牙模块
 uint8_t battery_is_read_flag = 0;        // 是否允许读取电量
 
+
+
+__attribute__((weak))  void battery_percent_changed_user(uint8_t level){}
+__attribute__((weak))  void battery_percent_changed_kb(uint8_t level){}
+void battery_percent_changed(uint8_t level)
+{
+    battery_percent_changed_user(level);
+    battery_percent_changed_kb(level);
+}
+
+
 // 电池电压转百分比
 uint8_t calculate_battery_percentage(uint16_t current_mv) {
     if (current_mv >= BATTERY_MAX_MV) {
@@ -99,12 +110,15 @@ uint8_t battery_read_percent(void)
     new_percent = ((new_percent + 2) / 5) * 5;
     if (new_percent > 100) new_percent = 100;
 
-
     km_analogAdcStop(BATTERY_ADC_PIN);
 
-    battery_percent = new_percent;
-    battery_mv = voltage_mV_actual;
-    km_printf("bat(mV):%d -> %d\n",battery_mv,battery_percent);
+    if(new_percent != battery_percent)
+    {
+        battery_percent_changed(battery_percent);
+        battery_percent = new_percent;
+        battery_mv = voltage_mV_actual;
+        km_printf("bat(mV):%d -> %d\n",battery_mv,battery_percent);
+    }
     return sta;  
 }
 

@@ -43,36 +43,36 @@ uint16_t rgb_bat_led_idx[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 uint8_t rgb_bat_low_flag = 0;
 
 // 唤醒后延时点亮 RGB 的标志位
-static uint8_t lpm_wakeup_delay_open_rgb_flag = 0;
+static uint8_t rgb_matrix_delay_open_flag = 0;
 // 记录唤醒时间
-static uint32_t lpm_wakeup_delay_open_rgb_timer = 0;
+static uint32_t rgb_matrix_delay_open_timer = 0;
 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT(
-    QK_GESC, KC_1,    KC_2,     KC_3,     KC_4,    KC_5,    KC_6,    KC_7,    KC_8,      KC_9,     KC_0,     KC_MINS,  KC_EQL,  KC_BSLS, KC_BSPC,
+    QK_GESC, KC_1,    KC_2,     KC_3,     KC_4,    KC_5,    KC_6,    KC_7,    KC_8,      KC_9,     KC_0,     KC_MINS,  KC_EQL,  KC_BSPC, 
     KC_TAB,  KC_Q,    KC_W,     KC_E,     KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,      KC_O,     KC_P,     KC_LBRC,  KC_RBRC, KC_BSLS,
     KC_CAPS, KC_A,    KC_S,     KC_D,     KC_F,    KC_G,    KC_H,    KC_J,    KC_K,      KC_L,     KC_SCLN,  KC_QUOT,  KC_BSLS, KC_ENT,
     KC_LSFT, KC_Z,    KC_X,     KC_C,     KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM,   KC_DOT,   KC_SLSH,  KC_RSFT,  KC_UP,   KC_DEL,
-    KC_LCTL, KC_LGUI, KC_LALT,  KC_SPC,  KC_SPC,                    KC_SPC,    MO(1),    KC_RCTL,    KC_LEFT,  KC_DOWN, KC_RIGHT),
+    KC_LCTL, KC_LGUI, KC_LALT,  KC_SPC,  KC_SPC,                     KC_SPC,  MO(1),     KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RIGHT, KC_BSPC),
   [1] = LAYOUT(
-    KC_GRV , KC_F1,   KC_F2,   KC_F3,    KC_F4,   KC_F5,   KC_F6,   KC_F7,    KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_TRNS, KC_DEL,
-    KC_TRNS, BLE_SW1, BLE_SW2, BLE_SW3,  RF_TOG, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, USB_TOG, NK_TOGG, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  RM_TOGG, RM_NEXT, RM_PREV, KC_TRNS, KC_TRNS, KC_BRIU, KC_TRNS,
-    KC_TRNS, GU_TOGG, KC_TRNS, KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, RGB_BAT, KC_VOLD, KC_BRID, KC_VOLU),
+    KC_GRV , KC_F1,   KC_F2,   KC_F3,    KC_F4,   KC_F5,   KC_F6,   KC_F7,    KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_DEL, 
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, RM_TOGG, RM_NEXT, RM_PREV, RGB_BAT, KC_BRIU, KC_TRNS, KC_TRNS,
+    KC_TRNS, GU_TOGG, KC_TRNS, KC_TRNS,  KC_TRNS,                   KC_TRNS, KC_TRNS, MO(2),   KC_VOLD, KC_BRID, KC_VOLU, KC_DEL),
   [2] = LAYOUT(
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+    KC_TRNS, BLE_SW1, BLE_SW2, BLE_SW3,  RF_TOG,  KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+    KC_TRNS, USB_TOG, NK_TOGG, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS,                   KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
   [3] = LAYOUT(
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS)
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                    KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
 };
 
 
@@ -115,6 +115,7 @@ void ws2812_set_power(uint8_t on)
 // After initializing the peripheral
 void keyboard_post_init_kb(void)
 {
+    rgb_matrix_delay_open_flag = 1;
     ws2812_set_power(1);
     rgb_matrix_is_enabled_temp_v = rgb_matrix_is_enabled();
     // rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_REACTIVE_WIDE);// rgb_matrix_mode_noeeprom(RGB_MATRIX_MULTISPLASH);    // 这两个测试xy用，挺好 // rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_SPIRAL);
@@ -123,7 +124,7 @@ void keyboard_post_init_kb(void)
 // 低功耗外围设备电源控制
 void lpm_device_power_open(void) 
 {
-    lpm_wakeup_delay_open_rgb_flag = 1;
+    rgb_matrix_delay_open_flag = 1;
     ws2812_set_power(1);
     if(is_sleep == 1)
     {
@@ -229,16 +230,16 @@ void rgb_matrix_all_black(void)
 }
 // 矩阵灯任务
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    if (lpm_wakeup_delay_open_rgb_flag == 1) {
-        lpm_wakeup_delay_open_rgb_flag = 2;
-        lpm_wakeup_delay_open_rgb_timer = timer_read32();
+    if (rgb_matrix_delay_open_flag == 1) {
+        rgb_matrix_delay_open_flag = 2;
+        rgb_matrix_delay_open_timer = timer_read32();
         rgb_matrix_all_black();
         return false;
     }
-    if (lpm_wakeup_delay_open_rgb_flag == 2) {
+    if (rgb_matrix_delay_open_flag == 2) {
         rgb_matrix_all_black();
-        if (timer_elapsed32(lpm_wakeup_delay_open_rgb_timer) > 500) { // 延时 500ms
-            lpm_wakeup_delay_open_rgb_flag = 0;
+        if (timer_elapsed32(rgb_matrix_delay_open_timer) > 500) { // 延时 500ms
+            rgb_matrix_delay_open_flag = 0;
         }
         return false;
     }
@@ -298,7 +299,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
 // ************** 闪烁rgb灯逻辑 **************
 
-// ************** 电量百分比 亮灯逻辑 **************
+// ************** 显示电量灯条 逻辑 **************
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
     if(rgb_bat_show_flag  == 1)   
@@ -328,7 +329,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         return false;   
     }
 #endif
-// ************** 电量百分比 亮灯逻辑 **************
+// ************** 显示电量灯条 逻辑 **************
     return false;
 }
 
@@ -367,22 +368,13 @@ void wireless_rf24g_hanlde_kb(uint8_t connectSta,uint8_t pairingSta)
 }
 
 // 电量回调函数 红灯 慢闪
-void bhq_bat_state_handle_kb(uint8_t bat_sta)
+void battery_percent_changed_kb(uint8_t level)
 {
-    switch (bat_sta)
+    del_all_blink_task();
+    if(level <= 10)
     {
-        case 0 :
-        {
-            del_all_blink_task();
-            break;
-        }
-        case 1 :
-        case 2 :
-        {
-            del_all_blink_task();
-            add_blink_task(0, RGB_RED, 255, 500, 500);
-            break;
-        }
+        del_all_blink_task();
+        add_blink_task(0, RGB_RED, 255, 500, 500);
     }
 }
 

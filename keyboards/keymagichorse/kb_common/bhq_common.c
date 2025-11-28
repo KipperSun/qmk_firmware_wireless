@@ -217,31 +217,26 @@ void bhq_switch_host_task(void){
 }
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
-// 电池回调函数
-__attribute__((weak)) void bhq_bat_state_handle_kb(uint8_t bat_sta){}
-void bhq_bat_low_check_task(void)
+void battery_percent_changed_user(uint8_t level)
 {
     if (usb_power_connected()) {
         if (bhq_bat_low_sta != 0) {
             bhq_bat_low_sta = 0;
             bluetooth_enabled();  // USB供电时确保蓝牙开启
-            bhq_bat_state_handle_kb(bhq_bat_low_sta); 
         }
         return;
     }
-    uint8_t battery_percent = battery_percent_get();
+    uint8_t battery_percent = level;
     if (battery_percent <= 5) {
         if (bhq_bat_low_sta != 2) {
             bhq_bat_low_sta = 2;
             bluetooth_disabled();         // 严重低电量时禁用蓝牙
-            bhq_bat_state_handle_kb(bhq_bat_low_sta); // 5%严重低电量
         }
     } 
     else if (battery_percent <= 10) {
         if (bhq_bat_low_sta != 1) {
             bhq_bat_low_sta = 1;
             bluetooth_enabled(); 
-            bhq_bat_state_handle_kb(bhq_bat_low_sta); // 10%低电量
         }
     } 
     else {
@@ -249,7 +244,6 @@ void bhq_bat_low_check_task(void)
             bhq_bat_low_sta = 0; // 电量恢复正常
             bluetooth_enabled(); // 确保蓝牙开启
             battery_enable_ble_update();
-            bhq_bat_state_handle_kb(bhq_bat_low_sta); 
         }
     }
 }
@@ -261,9 +255,7 @@ void bhq_wireless_task(void)
     bhq_switch_host_task();
 # if defined(KB_CHECK_BATTERY_ENABLED)
     battery_task();
-    bhq_bat_low_check_task();   // 低电量检测
 #endif
-
 }
 
 // Keyboard level code can override this, but shouldn't need to.
