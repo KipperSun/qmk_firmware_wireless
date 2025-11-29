@@ -25,7 +25,7 @@
 #include "report_buffer.h"
 #include "uart.h"
 #include "bhq_common.h"
-
+#include "matrix_sleep.h"
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
 #endif
@@ -38,8 +38,8 @@ static uint32_t     lpm_timer_buffer = 0;
 static bool         lpm_time_up               = false;
 
 // use for config wakeUp Pin
-static const pin_t wakeUpRow_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
-static const pin_t wakeUpCol_pins[MATRIX_COLS]   = MATRIX_COL_PINS;
+// static const pin_t wakeUpRow_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
+// static const pin_t wakeUpCol_pins[MATRIX_COLS]   = MATRIX_COL_PINS;
 
 void ws2812power_enabled(void);
 void ws2812power_Disabled(void);
@@ -118,71 +118,13 @@ void enter_low_power_mode_prepare(void)
     {
        return;
     }
-#if SHIFT595_ENABLED
-    shift595_write_all(0x00);
-    shift595_pin_sleep();
-#endif
     lpm_set_unused_pins_to_input_analog();    // 设置没有使用的引脚为模拟输入
-#if SHIFT595_ENABLED
-    shift595_pin_sleep();
-#endif
+
 # if defined(KB_CHECK_BATTERY_ENABLED)
     battery_disable_read();
 #endif
+    matrix_sleepConfig();
 
-    uint8_t i = 0;
-#if (DIODE_DIRECTION == COL2ROW)
-    // Set row(low valid), read cols
-    for (i = 0; i < matrix_cols(); i++)
-    { // set col pull-up input
-        if(wakeUpCol_pins[i] == NO_PIN)
-        {
-            continue;
-        } 
-        ATOMIC_BLOCK_FORCEON {
-            gpio_set_pin_input_high(wakeUpCol_pins[i]);
-            palEnableLineEvent(wakeUpCol_pins[i], PAL_EVENT_MODE_RISING_EDGE);
-        }
-    }
-    for (i = 0; i < matrix_rows(); i++)
-    { // set row output low level
-        if(wakeUpRow_pins[i] == NO_PIN)
-        {
-            continue;
-        } 
-        ATOMIC_BLOCK_FORCEON {
-            gpio_set_pin_output(wakeUpRow_pins[i]);
-            gpio_write_pin_low(wakeUpRow_pins[i]);
-        }
-    }
-#elif (DIODE_DIRECTION == ROW2COL)
-
-    // Set col(low valid), read rows
-    for (i = 0; i < matrix_rows(); i++)
-    { // set row pull-up input
-        if(wakeUpRow_pins[i] == NO_PIN)
-        {
-            continue;
-        } 
-        ATOMIC_BLOCK_FORCEON {
-            gpio_set_pin_input_high(wakeUpRow_pins[i]);
-            palEnableLineEvent(wakeUpRow_pins[i], PAL_EVENT_MODE_RISING_EDGE);
-        }
-    }
-
-    for (i = 0; i < matrix_cols(); i++)
-    { // set col output low level
-        if(wakeUpCol_pins[i] == NO_PIN)
-        {
-            continue;
-        } 
-        ATOMIC_BLOCK_FORCEON {
-            gpio_set_pin_output(wakeUpCol_pins[i]);
-            gpio_write_pin_low(wakeUpCol_pins[i]);
-        }
-    }
-
-#endif
 
 
     gpio_set_pin_input_low(BHQ_IQR_PIN);

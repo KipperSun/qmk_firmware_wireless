@@ -1,12 +1,7 @@
 KB_COMMON_DIR = keyboards/keymagichorse/kb_common
 VPATH += ${KB_COMMON_DIR}
 
-# 74HC595 io扩展
-ifeq ($(strip $(SHIFT595_ENABLED)), yes)
-    OPT_DEFS += -DSHIFT595_ENABLED
-    VPATH += ${KB_COMMON_DIR}/74hc595/
-    SRC += kb_common/74hc595/74hc595.c
-endif
+
 
 # 日记类型 不写默认就是不打开 uart是借用蓝牙的串口的简单调试可以
 # rtt这个低功耗之后可能就用不了了，用起来就很麻烦，所以添加了uart借用bhq的串口用一下
@@ -24,6 +19,24 @@ ifeq ($(strip $(KB_DEBUG)), uart_bhq)
 	OPT_DEFS += -DKB_DEBUG
 # 
 endif   
+
+# 矩阵扫描相关
+MATRIX_TYPE ?= default
+ifneq ($(filter $(MATRIX_TYPE), default shift595),)
+    VPATH += ${KB_COMMON_DIR}/matrix/matrix_type
+    VPATH += ${KB_COMMON_DIR}/matrix/matrix_sleep
+    SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}.c
+    ifeq ($(strip $(MATRIX_TYPE)), shift595)
+        OPT_DEFS += -DSHIFT595_ENABLED
+        CUSTOM_MATRIX = lite	
+        VPATH += ${KB_COMMON_DIR}/matrix/matrix_type/shift595/
+        VPATH += ${KB_COMMON_DIR}/matrix/matrix_type/shift595/74hc595/
+        SRC += kb_common/matrix/matrix_type/shift595/74hc595/74hc595.c
+        SRC += kb_common/matrix/matrix_type/shift595/matrix_shift595.c
+    endif
+endif
+
+
 
 # 静电容
 ifeq ($(strip $(KB_EC_ENABLED)), yes)
