@@ -37,7 +37,6 @@ void board_init(void)
     lpm_init();
 #   endif
 #endif
-matrix_init();
 }
 void housekeeping_task_kb(void) {
 #if defined(BLUETOOTH_BHQ)

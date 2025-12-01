@@ -18,17 +18,17 @@
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT(
 		KC_NUM,   KC_PSLS,  KC_PAST,  KC_PMNS,
-		LT(1, KC_P7),    KC_P8,    KC_P9,    KC_PPLS,
+		KC_P7,    KC_P8,    KC_P9,    QK_BOOT,
 		KC_P4,    KC_P5,    KC_P6,
-		KC_P1,    KC_P2,    KC_P3, 
-		LT(1, KC_P0)	, KC_PDOT,  KC_PENT
+		LT(1, KC_P1),    KC_P2,    KC_P3, 
+		KC_P7	, KC_PDOT,  KC_PENT
 	),
 
 	[1] = LAYOUT(
-		QK_BOOT, KC_TRNS, KC_TRNS, KC_TRNS,
-		KC_A, KC_A, KC_TRNS, KC_TRNS,
-		KC_A, KC_A, KC_TRNS,
-		KC_A, KC_A, KC_TRNS, 
+		KC_A, KC_TRNS, KC_TRNS, KC_TRNS,
+		KC_B, KC_TRNS, KC_TRNS, KC_TRNS,
+		KC_C, KC_TRNS, KC_TRNS,
+		KC_TRNS, KC_TRNS, KC_TRNS, 
 		KC_TRNS, KC_TRNS, KC_TRNS
 	),
 
@@ -98,6 +98,8 @@ void keyboard_post_init_kb(void)
 	rgblight_disable();
 	rgblight_layers = _rgb_layers;  // 层灯光赋值
 	rgb_adv_unblink_all_layer();
-	layer_clear();
-
+	palSetLineMode(A1, PAL_MODE_INPUT_ANALOG); 
+	palSetLineMode(A0, PAL_MODE_INPUT_ANALOG); 
+	palSetLineMode(A2, PAL_MODE_INPUT_ANALOG); 
+	palSetLineMode(A3, PAL_MODE_INPUT_ANALOG); 
 }

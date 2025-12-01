@@ -24,7 +24,6 @@
 // Its active level is "BHQ_IRQ_AND_INT_LEVEL of bhq.h " 
 #   define BHQ_IQR_PIN          A1             
 #   define BHQ_INT_PIN          A0             
-#   define USB_POWER_SENSE_PIN  A10             // USB插入检测引脚  
 
 #   define UART_DRIVER          SD1
 #   define UART_TX_PIN          A2

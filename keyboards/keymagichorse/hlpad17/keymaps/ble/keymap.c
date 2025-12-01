@@ -25,17 +25,18 @@
 #include "transport.h"
 #include "report_buffer.h"
 
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT(
 		KC_NUM,   KC_PSLS,  KC_PAST,  KC_PMNS,
-		KC_P7,    KC_P8,    KC_P9,    KC_PPLS,
+		KC_P7,    KC_P8,    KC_P9,    QK_BOOT,
 		KC_P4,    KC_P5,    KC_P6,
 		LT(1, KC_P1),    KC_P2,    KC_P3, 
-		LT(1, KC_P0)	, KC_PDOT,  KC_PENT
+		KC_P7	, KC_PDOT,  KC_PENT
 	),
 
 	[1] = LAYOUT(
-		QK_BOOT, KC_TRNS, KC_TRNS, KC_TRNS,
+		KC_A, KC_TRNS, KC_TRNS, KC_TRNS,
 		BLE_SW1, BLE_SW2, BLE_SW3,  RF_TOG,
 		USB_TOG, NK_TOGG, KC_TRNS,
 		KC_TRNS, KC_TRNS, KC_TRNS, 
@@ -58,7 +59,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		KC_TRNS, KC_TRNS, KC_TRNS
 	),
 };
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     return process_record_bhq(keycode, record);
 }

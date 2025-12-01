@@ -14,7 +14,7 @@
         "console": false,
         "extrakey": true,
         "mousekey": true,
-        "bluetooth": false,
+        "bluetooth": true,
         "nkro": true,
         "rgblight": true
     },
