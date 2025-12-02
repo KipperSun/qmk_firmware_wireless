@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include QMK_KEYBOARD_H
-
+#include "uart.h"
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT(
 		KC_NUM,   KC_PSLS,  KC_PAST,  KC_PMNS,
@@ -89,7 +89,7 @@ void rgb_adv_unblink_all_layer(void) {
     }
 }
 
-
+uint8_t hello_log[] = "hello debug\n";
 // After initializing the peripheral
 void keyboard_post_init_kb(void)
 {
@@ -100,6 +100,6 @@ void keyboard_post_init_kb(void)
 	rgb_adv_unblink_all_layer();
 	palSetLineMode(A1, PAL_MODE_INPUT_ANALOG); 
 	palSetLineMode(A0, PAL_MODE_INPUT_ANALOG); 
-	palSetLineMode(A2, PAL_MODE_INPUT_ANALOG); 
-	palSetLineMode(A3, PAL_MODE_INPUT_ANALOG); 
+	uart_init(115200);
+	uart_transmit(hello_log,13);
 }

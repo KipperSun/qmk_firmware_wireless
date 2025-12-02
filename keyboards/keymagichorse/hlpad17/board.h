@@ -23,3 +23,4 @@
 // board.h
 #undef  AT32_HEXTCLK
 #define AT32_HEXTCLK 16000000
+// #define AT32_HEXTCLK 8000000

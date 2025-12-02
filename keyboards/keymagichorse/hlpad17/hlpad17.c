@@ -28,6 +28,7 @@
 #   include "km_printf.h"
 #endif
 
+#include "uart.h"
 
 void board_init(void) 
 {
@@ -38,6 +39,9 @@ void board_init(void)
 #   endif
 #endif
 }
+
+uint32_t temp_log_cut1 = 0;
+uint8_t hello_log_2[] = "hello debug11\n";
 void housekeeping_task_kb(void) {
 #if defined(BLUETOOTH_BHQ)
     bhq_wireless_task();
@@ -45,4 +49,10 @@ void housekeeping_task_kb(void) {
         lpm_task();
     #   endif
 #endif
+    if (timer_elapsed32(temp_log_cut1) > 500) 
+    {
+        temp_log_cut1 = timer_read32();
+		uart_transmit(hello_log_2,14);
+    }
 }
+

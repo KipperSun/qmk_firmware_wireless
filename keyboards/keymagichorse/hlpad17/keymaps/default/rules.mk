@@ -1,1 +1,2 @@
 VIA_ENABLE = yes
+UART_DRIVER_REQUIRED = yes

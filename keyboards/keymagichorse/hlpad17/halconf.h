@@ -16,14 +16,12 @@
 
 #pragma once
 
-#ifdef BLUETOOTH_BHQ
-    #define PAL_USE_CALLBACKS   TRUE
-    #define HAL_USE_PAL         TRUE           
-    #define PAL_USE_WAIT        TRUE  
+#define PAL_USE_CALLBACKS   TRUE
+#define HAL_USE_PAL         TRUE           
+#define PAL_USE_WAIT        TRUE  
 
-    #undef HAL_USE_ADC
-    #define HAL_USE_ADC         TRUE
-#endif
+#undef HAL_USE_ADC
+#define HAL_USE_ADC         TRUE
 
 #include_next <halconf.h>
 

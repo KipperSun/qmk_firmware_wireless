@@ -18,15 +18,13 @@
 
 #include_next <mcuconf.h>
 
-#ifdef BLUETOOTH_BHQ
-    #define HAL_USE_SERIAL  TRUE        // enabled SERIAL
+#define HAL_USE_SERIAL  TRUE        // enabled SERIAL
 
-    #undef AT32_SERIAL_USE_USART1
-    #define AT32_SERIAL_USE_USART1 TRUE
+#undef AT32_SERIAL_USE_USART2
+#define AT32_SERIAL_USE_USART2 TRUE
 
-    #undef AT32_ADC_USE_ADC1
-    #define AT32_ADC_USE_ADC1          TRUE
-#endif
+#undef AT32_ADC_USE_ADC1
+#define AT32_ADC_USE_ADC1          TRUE
 
 // mcuconf.h
 #undef  AT32_PLLMULT_VALUE
