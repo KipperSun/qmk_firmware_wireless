@@ -29,9 +29,11 @@
 #endif
 
 #include "uart.h"
-
+#include "hal.h"
 void board_init(void) 
 {
+    IOMUX->REMAP7 &= ~(0x07 << 16);   
+    IOMUX->REMAP7 |=  (0x04 << 16);  
 #if defined(BLUETOOTH_BHQ)
     bhq_common_init();
 #   if defined(KB_LPM_ENABLED)

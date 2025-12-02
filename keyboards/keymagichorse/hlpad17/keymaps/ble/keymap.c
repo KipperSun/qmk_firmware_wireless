@@ -28,15 +28,15 @@
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT(
-		KC_NUM,   KC_PSLS,  KC_PAST,  KC_PMNS,
-		KC_P7,    KC_P8,    KC_P9,    QK_BOOT,
-		KC_P4,    KC_P5,    KC_P6,
-		LT(1, KC_P1),    KC_P2,    KC_P3, 
-		KC_P7	, KC_PDOT,  KC_PENT
+		KC_NUM,   		KC_PSLS,  KC_PAST,  KC_PMNS,
+		KC_P7,    		KC_P8,    KC_P9,    QK_BOOT,
+		KC_P4,    		KC_P5,    KC_P6,
+		KC_P1,    		KC_P2,    KC_P3, 
+		LT(1, KC_P0), 	KC_PDOT,  KC_PENT
 	),
-
+    
 	[1] = LAYOUT(
-		KC_A, KC_TRNS, KC_TRNS, KC_TRNS,
+		KC_A,    KC_TRNS, KC_TRNS, KC_TRNS,
 		BLE_SW1, BLE_SW2, BLE_SW3,  RF_TOG,
 		USB_TOG, NK_TOGG, KC_TRNS,
 		KC_TRNS, KC_TRNS, KC_TRNS, 
@@ -71,12 +71,12 @@ bool via_command_kb(uint8_t *data, uint8_t length) {
 const rgblight_segment_t PROGMEM bt_conn1[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_BLUE} );        // 通道1：蓝色
 const rgblight_segment_t PROGMEM bt_conn2[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_TURQUOISE} );   // 通道2：蓝绿色（青绿）
 const rgblight_segment_t PROGMEM bt_conn3[]   = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_ORANGE} );      // 通道3：橙色
-const rgblight_segment_t PROGMEM caps_lock_[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_PURPLE} );      // 大小写：紫色
+const rgblight_segment_t PROGMEM num_lock_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_PURPLE} );    // 数字锁：紫色
 const rgblight_segment_t PROGMEM bat_low_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_RED} );        // 低电量：红色
 const rgblight_segment_t PROGMEM rf24g_led[] = RGBLIGHT_LAYER_SEGMENTS( {0, 1, HSV_YELLOW} );       // 24g：黄色
 
 const rgblight_segment_t* const PROGMEM _rgb_layers[] = RGBLIGHT_LAYERS_LIST( 
-    bt_conn1, bt_conn2, bt_conn3, caps_lock_, bat_low_led, rf24g_led
+    bt_conn1, bt_conn2, bt_conn3, num_lock_led, bat_low_led, rf24g_led
 );
 
 void rgb_adv_unblink_all_layer(void) {
@@ -91,7 +91,7 @@ bool led_update_user(led_t led_state) {
     // 如果当前是USB连接，或者是蓝牙/2.4G连接且已配对连接状态
     if( (transport_get() > KB_TRANSPORT_USB && wireless_get() == WT_STATE_CONNECTED) || ( usb_power_connected() == true && transport_get() == KB_TRANSPORT_USB))
     {
-        rgblight_set_layer_state(3, led_state.caps_lock);
+        rgblight_set_layer_state(3, led_state.num_lock);
     }
     return true;
 }

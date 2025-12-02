@@ -25,9 +25,7 @@
 #   define BHQ_IQR_PIN          A1             
 #   define BHQ_INT_PIN          A0             
 
-#   define UART_DRIVER          SD2
-#   define UART_TX_PIN          A2
-#   define UART_RX_PIN          A3
+
 
 // STM32使用到的高速晶振引脚号，做低功耗需要用户配置，每款芯片有可能不一样的
 #define LPM_STM32_HSE_PIN_IN     D1  
@@ -42,7 +40,9 @@
 
 #endif
 
-
+#   define UART_DRIVER          SD2
+#   define UART_TX_PIN          A2
+#   define UART_RX_PIN          A3
 
 // 0 = 低电平打开电源  高电平关闭电源
 // 1 = 高电平打开电源  低电平关闭电源
