@@ -94,18 +94,13 @@ void My_PWR_EnterSTOPMode(void)
 //     palSetLineMode(LPM_STM32_HSE_PIN_IN, PAL_MODE_INPUT_ANALOG); 
 //     palSetLineMode(LPM_STM32_HSE_PIN_OUT, PAL_MODE_INPUT_ANALOG); 
 // #endif
-//     /* Wake source: Reset pin, all I/Os, BOR, PVD, PVM, RTC, LCD, IWDG,
-//     COMPx, USARTx, LPUART1, I2Cx, LPTIMx, USB, SWPMI */
-//     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-//     PWR->CR |=
-//         PWR_CR_MRLVDS |
-//         PWR_CR_LPLVDS |
-//         PWR_CR_FPDS |
-//         PWR_CR_LPDS |
-//         0;
-//     __WFI();
+    /* Wake source: Reset pin, all I/Os, BOR, PVD, PVM, RTC, LCD, IWDG,
+    COMPx, USARTx, LPUART1, I2Cx, LPTIMx, USB, SWPMI */
 
-//     SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    PWC->CTRL |= PWC_CTRL_LPSEL;
+    __WFI();
+    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
 }
 
 void enter_low_power_mode_prepare(void)

@@ -133,15 +133,18 @@ uint8_t battery_read_percent(void)
     
     if (stable_count >= 6) {
         battery_mv = voltage_mV_actual;
+        if(battery_percent != new_percent)
+        {
+            battery_percent_changed(battery_percent);
+        }
         battery_percent = new_percent;
-
         km_printf("stable success: %dmV -> %d\n", battery_mv, battery_percent);
-        battery_percent_changed(battery_percent);
         // stable_count = 0; 
     }
     
     return sta;  
 }
+
 void battery_init(void)
 {
     battery_is_read_flag = 1;        // 是否允许读取电量

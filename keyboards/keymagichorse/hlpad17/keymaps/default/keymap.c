@@ -83,6 +83,7 @@ void ws2812_set_power(uint8_t on)
 #endif
     }
 }
+
 void rgb_adv_unblink_all_layer(void) {
     for (uint8_t i = 0; i < 1; i++) {
         rgblight_unblink_layer(i);
