@@ -142,6 +142,7 @@ uint8_t battery_read_percent(void)
             km_printf("init stable success: %dmV -> %d\n", battery_mv, battery_percent);
             sta = 1;
             // stable_count = 0; 
+            battery_percent_changed(battery_percent);
         }
         return sta;  
     }
