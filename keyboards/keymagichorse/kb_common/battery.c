@@ -33,7 +33,6 @@ uint8_t last_sample = 0xff;        // 改为uint8_t，因为存储的是百分�
 uint8_t stable_count = 0;
 
 
-
 __attribute__((weak))  void battery_percent_changed_user(uint8_t level){}
 __attribute__((weak))  void battery_percent_changed_kb(uint8_t level){}
 void battery_percent_changed(uint8_t level)
@@ -134,7 +133,18 @@ uint8_t battery_read_percent(void)
         stable_count = 1;
         last_sample = new_percent;
     }
-    
+    if(battery_init_flag == 0)
+    {
+        battery_init_flag = 1;
+        if (stable_count >= 2) {
+            battery_mv = voltage_mV_actual;
+            battery_percent = new_percent;
+            km_printf("init stable success: %dmV -> %d\n", battery_mv, battery_percent);
+            sta = 1;
+            // stable_count = 0; 
+        }
+        return sta;  
+    }
     if (stable_count >= 6) {
         battery_mv = voltage_mV_actual;
         battery_percent = new_percent;
@@ -148,6 +158,8 @@ uint8_t battery_read_percent(void)
 
 void battery_init(void)
 {
+    battery_init_flag = 0;
+
     battery_is_read_flag = 1;        // 是否允许读取电量
     battery_is_valid = 0;
     last_sample = 0xff;   
