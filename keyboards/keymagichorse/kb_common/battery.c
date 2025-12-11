@@ -38,7 +38,7 @@ __attribute__((weak))  void battery_percent_changed_kb(uint8_t level){}
 void battery_percent_changed(uint8_t level)
 {
     // if(battery_update_ble_flag == 1)
-    if(battery_update_ble_flag == 1 && battery_is_valid == 1)
+    if(battery_init_flag == 0 || (battery_update_ble_flag == 1 && battery_is_valid == 1) )
     {
         bhq_update_battery_percent(battery_percent, battery_mv);
     }
@@ -135,7 +135,6 @@ uint8_t battery_read_percent(void)
     }
     if(battery_init_flag == 0)
     {
-        battery_init_flag = 1;
         if (stable_count >= 2) {
             battery_mv = voltage_mV_actual;
             battery_percent = new_percent;
@@ -143,6 +142,7 @@ uint8_t battery_read_percent(void)
             sta = 1;
             // stable_count = 0; 
             battery_percent_changed(battery_percent);
+            battery_init_flag = 1;
         }
         return sta;  
     }
@@ -191,7 +191,7 @@ void battery_task(void)
 
 void battery_reset_timer(void)
 {
-    battery_timer = timer_read32();
+    // battery_timer = timer_read32();
     battery_update_timer = timer_read32();
 }
 
