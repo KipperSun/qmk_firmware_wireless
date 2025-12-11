@@ -26,6 +26,10 @@ uint32_t battery_timer = 0;     // 电池采样计时
 
 uint8_t battery_update_ble_flag = 0;    // 是否更新电量百分比到蓝牙模块
 uint8_t battery_is_read_flag = 0;        // 是否允许读取电量
+uint8_t battery_init_flag = 0;
+
+uint8_t last_sample = 0xff;        // 改为uint8_t，因为存储的是百分比
+uint8_t stable_count = 0;
 
 
 
@@ -33,9 +37,13 @@ __attribute__((weak))  void battery_percent_changed_user(uint8_t level){}
 __attribute__((weak))  void battery_percent_changed_kb(uint8_t level){}
 void battery_percent_changed(uint8_t level)
 {
-    if(battery_update_ble_flag == 1)
+    static uint8_t last_level = 0xff;
+
+    // if(battery_update_ble_flag == 1)
+    if(battery_update_ble_flag == 1 && battery_is_valid == 1 && level != last_level)
     {
         bhq_update_battery_percent(battery_percent, battery_mv);
+        last_level = level;
     }
     battery_percent_changed_user(level);
     battery_percent_changed_kb(level);
@@ -61,7 +69,7 @@ uint8_t calculate_battery_percentage(uint16_t current_mv) {
 // 读取电量百分比
 uint8_t battery_read_percent(void)
 {
-    uint8_t sta = 1;
+    uint8_t sta = 0;
     /* USB 供电时固定 100% */
     if (usb_power_connected()) {
         battery_percent = 100;
@@ -72,8 +80,6 @@ uint8_t battery_read_percent(void)
     uint16_t max_v = 0;
     uint16_t min_v = UINT16_MAX;
     const uint8_t NUM_SAMPLES = 10;
-    static uint8_t last_sample = 0xff;        // 改为uint8_t，因为存储的是百分比
-    static uint8_t stable_count = 0;
 
     // ADC采样
     km_analogReadPin(BATTERY_ADC_PIN);
@@ -133,12 +139,9 @@ uint8_t battery_read_percent(void)
     
     if (stable_count >= 6) {
         battery_mv = voltage_mV_actual;
-        if(battery_percent != new_percent)
-        {
-            battery_percent_changed(battery_percent);
-        }
         battery_percent = new_percent;
         km_printf("stable success: %dmV -> %d\n", battery_mv, battery_percent);
+        sta = 1;
         // stable_count = 0; 
     }
     
@@ -149,6 +152,8 @@ void battery_init(void)
 {
     battery_is_read_flag = 1;        // 是否允许读取电量
     battery_is_valid = 0;
+    last_sample = 0xff;   
+    stable_count = 0;
 }
 
 void battery_task(void)
@@ -162,6 +167,7 @@ void battery_task(void)
         {
             sta = battery_read_percent();
             battery_is_valid = sta;
+            battery_percent_changed(battery_percent);
         }
         km_printf("%d %d\n",battery_is_read_flag,battery_update_ble_flag);
     }
