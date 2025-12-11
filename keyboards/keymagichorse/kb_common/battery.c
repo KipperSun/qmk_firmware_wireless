@@ -23,6 +23,7 @@ uint8_t battery_percent = 100;  // 电池电量百分比
 uint8_t battery_is_valid = 0;   // 电池电量是否有效
 uint16_t battery_mv = 0;        // 电池毫伏
 uint32_t battery_timer = 0;     // 电池采样计时
+uint32_t battery_update_timer = 0;     // 电池更新即时
 
 uint8_t battery_update_ble_flag = 0;    // 是否更新电量百分比到蓝牙模块
 uint8_t battery_is_read_flag = 0;        // 是否允许读取电量
@@ -37,13 +38,10 @@ __attribute__((weak))  void battery_percent_changed_user(uint8_t level){}
 __attribute__((weak))  void battery_percent_changed_kb(uint8_t level){}
 void battery_percent_changed(uint8_t level)
 {
-    static uint8_t last_level = 0xff;
-
     // if(battery_update_ble_flag == 1)
-    if(battery_update_ble_flag == 1 && battery_is_valid == 1 && level != last_level)
+    if(battery_update_ble_flag == 1 && battery_is_valid == 1)
     {
         bhq_update_battery_percent(battery_percent, battery_mv);
-        last_level = level;
     }
     battery_percent_changed_user(level);
     battery_percent_changed_kb(level);
@@ -159,7 +157,7 @@ void battery_init(void)
 void battery_task(void)
 { 
     uint8_t sta = 0;
-    // 定时任务，2秒执行一次
+    // 定时任务，500ms执行一次
     if (timer_elapsed32(battery_timer) > 500) 
     {
         battery_timer = timer_read32();
@@ -167,15 +165,21 @@ void battery_task(void)
         {
             sta = battery_read_percent();
             battery_is_valid = sta;
-            battery_percent_changed(battery_percent);
         }
         km_printf("%d %d\n",battery_is_read_flag,battery_update_ble_flag);
+    }
+    // 定时任务，2秒执行一次
+    if (timer_elapsed32(battery_update_timer) > 2000) 
+    {
+        battery_update_timer = timer_read32();
+        battery_percent_changed(battery_percent);
     }
 }
 
 void battery_reset_timer(void)
 {
     battery_timer = timer_read32();
+    battery_update_timer = timer_read32();
 }
 
 uint8_t battery_percent_get(void)
