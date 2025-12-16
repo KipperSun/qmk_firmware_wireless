@@ -10,13 +10,11 @@
         "**/*.uf2": true
     },
     "files.associations": {
-        // QMK Filetypes
         "keyboard.json": "jsonc",
         "info.json": "jsonc",
         "keymap.json": "jsonc",
         "qmk.json": "jsonc",
         "qmk_module.json": "jsonc",
-        // Standard filetypes
         "*.h": "c",
         "*.c": "c",
         "*.inc": "c",
@@ -25,7 +23,20 @@
         "xstddef": "c",
         "type_traits": "c",
         "utility": "c",
-        "ranges": "c"
+        "ranges": "c",
+        "algorithm": "c",
+        "iterator": "c",
+        "xhash": "c",
+        "xtree": "c",
+        "xutility": "c",
+        "chrono": "c",
+        "functional": "c",
+        "optional": "c",
+        "regex": "c",
+        "system_error": "c",
+        "xlocmon": "c",
+        "xlocnum": "c",
+        "xtr1common": "c"
     },
     "[markdown]": {
         "editor.trimAutoWhitespace": false,

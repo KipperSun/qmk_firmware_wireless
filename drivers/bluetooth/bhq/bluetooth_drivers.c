@@ -18,27 +18,27 @@
 #include "bluetooth.h"
 #include "bluetooth_bhq.h"
 
-uint8_t bluetooth_enabled = true;
+uint8_t is_bluetooth_enabled = true;
 
 void bluetooth_init(void) {
     bluetooth_bhq_init();
-    bluetooth_enabled = true;
+    is_bluetooth_enabled = true;
 }
 
 void bluetooth_task(void) {
     bluetooth_bhq_task();
 }
 
-void bluetooth_enable(void) {
-    bluetooth_enabled = true;
+void bluetooth_enabled(void) {
+    is_bluetooth_enabled = true;
 }
 
-void bluetooth_disable(void) {
-    bluetooth_enabled = false;
+void bluetooth_disabled(void) {
+    is_bluetooth_enabled = false;
 }
 
 bool bluetooth_is_enabled(void) {
-    return bluetooth_enabled;
+    return is_bluetooth_enabled;
 }
 
 bool bluetooth_is_connected(void) {

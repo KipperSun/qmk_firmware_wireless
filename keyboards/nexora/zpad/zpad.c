@@ -23,7 +23,7 @@
 #   include "lpm.h"
 #endif
 
-#if defined(KM_DEBUG)
+#if defined(KB_DEBUG)
 #   include "km_printf.h"
 #endif
 

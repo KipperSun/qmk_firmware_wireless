@@ -37,16 +37,17 @@
 #define LPM_STM32_HSE_PIN_OUT    H0
 
 #define REPORT_BUFFER_QUEUE_SIZE    68
-#define BATTER_ADC_PIN              B1
-#define BATTER_ADC_DRIVER           ADCD1
+#define BATTERY_ADC_PIN              B1
+#define BATTERY_ADC_DRIVER           ADCD1
+// usb 检测
+#define USB_POWER_SENSE_PIN         A10
+#define USB_POWER_CONNECTED_LEVEL   1    
 
 #endif
 
-#define WS2812_POWER_PIN    B8
-#define WS2812_BYTE_ORDER   WS2812_BYTE_ORDER_GRB
+#define WS2812_POWER_PIN        B8
+#define WS2812_POWER_ON_LEVEL   0      // 0-低电平打开电源  1-高电平关闭电源，根据原理图设置
 
+#define WS2812_BYTE_ORDER   WS2812_BYTE_ORDER_GRB
 #define RGBLIGHT_LIMIT_VAL 180
-#define RGBLIGHT_LAYERS
 #define RGBLIGHT_LAYER_BLINK
-#define RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF
-#define RGBLIGHT_LAYERS_RETAIN_VAL
