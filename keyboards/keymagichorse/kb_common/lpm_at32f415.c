@@ -26,6 +26,7 @@
 #include "uart.h"
 #include "bhq_common.h"
 #include "matrix_sleep.h"
+
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
 #endif
@@ -50,11 +51,6 @@ __attribute__((weak)) void lpm_device_power_close(void) ;
 
 void lpm_init(void)
 {
-    // 禁用调试功能以降低功耗
-    // DBGMCU->CR &= ~DBGMCU_CR_DBG_SLEEP;   // 禁用在Sleep模式下的调试
-    // DBGMCU->CR &= ~DBGMCU_CR_DBG_STOP;    // 禁用在Stop模式下的调试
-    // DBGMCU->CR &= ~DBGMCU_CR_DBG_STANDBY; // 禁用在Standby模式下的调试
-
     lpm_timer_reset();
 
     gpio_write_pin_high(BHQ_INT_PIN);
@@ -82,24 +78,17 @@ __attribute__((weak)) void lpm_set_unused_pins_to_input_analog(void)
 
 void My_PWR_EnterSTOPMode(void)
 {
-// #if STM32_HSE_ENABLED
-//     /* Switch to HSI */
-//     RCC->CFGR = (RCC->CFGR & (~STM32_SW_MASK)) | STM32_SW_HSI;
-//     while ((RCC->CFGR & RCC_CFGR_SWS) != (STM32_SW_HSI << 2));
-
-//     /* Set HSE off  */
-//     RCC->CR &= ~RCC_CR_HSEON;
-//     while ((RCC->CR & RCC_CR_HSERDY));
-
-//     palSetLineMode(LPM_STM32_HSE_PIN_IN, PAL_MODE_INPUT_ANALOG); 
-//     palSetLineMode(LPM_STM32_HSE_PIN_OUT, PAL_MODE_INPUT_ANALOG); 
-// #endif
-    /* Wake source: Reset pin, all I/Os, BOR, PVD, PVM, RTC, LCD, IWDG,
-    COMPx, USARTx, LPUART1, I2Cx, LPTIMx, USB, SWPMI */
-
+    
+    // 配置ldo为低功耗
+    // PWC->LDOV |= PWC_LDOOV_VREXLPEN;
+    PWC->CTRL |= PWC_CTRL_VRSEL;
+    // at32 进入深度随眠模式
+    PWC->CTRL &= ~PWC_CTRL_LPSEL;
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-    PWC->CTRL |= PWC_CTRL_LPSEL;
+
     __WFI();
+
+    PWC->CTRL &= ~PWC_CTRL_VRSEL;
     SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
 }
 
@@ -115,8 +104,6 @@ void enter_low_power_mode_prepare(void)
     battery_disable_read();
 #endif
     matrix_sleepConfig();
-
-
 
     gpio_set_pin_input_low(BHQ_IQR_PIN);
     palEnableLineEvent(BHQ_IQR_PIN, PAL_EVENT_MODE_RISING_EDGE);
