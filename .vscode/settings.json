@@ -64,5 +64,6 @@
             "fileMatch": ["keymap.json"],
             "url": "./data/schemas/keymap.jsonschema"
         }
-    ]
+    ],
+    "cmake.sourceDirectory": "E:/gr/github/xmqmk/qmk_firmware/lib/pico-sdk/src/rp2_common"
 }

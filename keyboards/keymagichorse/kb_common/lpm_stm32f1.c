@@ -198,9 +198,9 @@ void enter_low_power_mode_prepare(void)
         init_usb_driver(&USBD1);
     }
  
-    /* Call debounce_free() to avoiding memory leak of debounce_counters as debounce_init()
-    invoked in matrix_init() alloc new memory to debounce_counters */
-    debounce_free();
+    // /* Call debounce_free() to avoiding memory leak of debounce_counters as debounce_init()
+    // invoked in matrix_init() alloc new memory to debounce_counters */
+    // debounce_free();
     matrix_init();
 
     lpm_timer_reset();

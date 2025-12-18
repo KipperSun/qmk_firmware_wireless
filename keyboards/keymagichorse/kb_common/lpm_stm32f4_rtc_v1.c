@@ -243,9 +243,9 @@ void exit_low_power_mode_prepare(void)
     palSetLineMode(A11, PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUPDR_FLOATING | PAL_MODE_ALTERNATE(10U));
     palSetLineMode(A12, PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUPDR_FLOATING | PAL_MODE_ALTERNATE(10U));
  
-    /* Call debounce_free() to avoiding memory leak of debounce_counters as debounce_init()
-    invoked in matrix_init() alloc new memory to debounce_counters */
-    debounce_free();
+    // /* Call debounce_free() to avoiding memory leak of debounce_counters as debounce_init()
+    // invoked in matrix_init() alloc new memory to debounce_counters */
+    // debounce_free();
     matrix_init();
 
     lpm_timer_reset();
