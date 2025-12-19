@@ -207,9 +207,9 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     // 如果当前是USB连接，或者是蓝牙/2.4G连接且已配对连接状态
     if( (transport_get() > KB_TRANSPORT_USB && wireless_get() == WT_STATE_CONNECTED) || ( usb_power_connected() == true && transport_get() == KB_TRANSPORT_USB))
     {
-        // 两个大写灯
+        // 一个大写灯
         if (host_keyboard_led_state().caps_lock) {
-            // 两个大写灯
+            // 一个大写灯
             rgb_matrix_set_color(25, RGB_PURPLE);
             // Q17 W18 E19 R20
         }

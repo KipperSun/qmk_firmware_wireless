@@ -1,0 +1,86 @@
+/* 键盘矩阵尺寸定义 */
+#define MATRIX_ROWS 6  // 矩阵行数
+#define MATRIX_COLS 16  // 矩阵列数
+
+/* 键盘矩阵引脚定义 */ 
+#define MATRIX_ROW_PINS { A3,A4,A5,A0,A1,A2 }  // 行引脚
+#define MATRIX_COL_PINS { B14,B13,B12,B2,B1,B0,A7,A6,B9,B8,B7,B6,B5,A9,A8,B15 }  // 列引脚
+
+
+//#define DEBUG_MATRIX_SCAN_RATE  // 启用矩阵扫描速率调试
+
+/* 矩阵二极管方向 */
+#define DIODE_DIRECTION COL2ROW  // 二极管方向：列到行(COL2ROW)
+#define ADC_RESOLUTION ADC_CFGR1_RES_12BIT  // ADC分辨率设为12位(0-4095)
+
+
+/* 传感器参数 */
+
+#define BOTTOMING_CALIBRATION_THRESHOLD 100  // 底部校准阈值
+
+/* 校准参数 */  
+
+
+/* EEPROM配置数据大小定义 */
+// 计算公式：(行数×列数×2) + 9  其中：行×列×2用于存储底部读数(uint16_t)，9用于存储其他配置(uint8_t和uint16_t)
+#define EECONFIG_KB_DATA_SIZE (MATRIX_ROWS*MATRIX_COLS*2 + 9)
+
+
+
+
+
+/* 灯 */
+
+#define WS2812_DI_PIN B4
+#define RGB_MATRIX_LED_COUNT 96
+//#define RGB_DISABLE_AFTER_TIMEOUT 5000 // number of ticks to wait until disabling effects
+//#define RGB_MATRIX_SLEEP // turn off effects when suspended
+//#define RGB_MATRIX_LED_PROCESS_LIMIT (DRIVER_LED_TOTAL + 4) / 5 // limits the number of LEDs to process in an animation per task run (increases keyboard responsiveness)
+//#define RGB_MATRIX_LED_FLUSH_LIMIT 16 // 以毫秒为单位限制动画更新 LED 的频率。 16（16ms）相当于限制为60fps（提高键盘响应速度）
+//#define RGB_MATRIX_HUE_STEP 8
+//#define RGB_MATRIX_SAT_STEP 8
+//#define RGB_MATRIX_VAL_STEP 8
+//#define RGB_MATRIX_SPD_STEP 10
+//#define RGB_MATRIX_CENTER { 32, 32 }
+
+#define RGB_MATRIX_STARTUP_MODE RGB_MATRIX_TYPING_HEATMAP	//默认模式
+#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 200			//最大亮度(0-255)
+#define RGB_MATRIX_STARTUP_VAL 150				//默认亮度
+
+
+#define RGB_MATRIX_KEYPRESSES  // reacts to keypresses
+//#define RGB_MATRIX_KEYRELEASES // reacts to keyreleases (instead of keypresses)
+#define RGB_MATRIX_FRAMEBUFFER_EFFECTS
+
+//特效启用
+#define ENABLE_RGB_MATRIX_ALPHAS_MODS
+#define ENABLE_RGB_MATRIX_GRADIENT_UP_DOWN
+#define ENABLE_RGB_MATRIX_GRADIENT_LEFT_RIGHT
+#define ENABLE_RGB_MATRIX_BREATHING
+#define ENABLE_RGB_MATRIX_BAND_SAT
+#define ENABLE_RGB_MATRIX_BAND_VAL
+#define ENABLE_RGB_MATRIX_CYCLE_ALL
+#define ENABLE_RGB_MATRIX_CYCLE_LEFT_RIGHT
+#define ENABLE_RGB_MATRIX_CYCLE_UP_DOWN
+#define ENABLE_RGB_MATRIX_RAINBOW_MOVING_CHEVRON
+#define ENABLE_RGB_MATRIX_CYCLE_OUT_IN
+#define ENABLE_RGB_MATRIX_CYCLE_OUT_IN_DUAL
+#define ENABLE_RGB_MATRIX_CYCLE_PINWHEEL
+#define ENABLE_RGB_MATRIX_CYCLE_SPIRAL
+#define ENABLE_RGB_MATRIX_RAINDROPS
+#define ENABLE_RGB_MATRIX_JELLYBEAN_RAINDROPS
+#define ENABLE_RGB_MATRIX_HUE_BREATHING
+#define ENABLE_RGB_MATRIX_HUE_PENDULUM
+#define ENABLE_RGB_MATRIX_HUE_WAVE
+#define ENABLE_RGB_MATRIX_PIXEL_FRACTAL
+#define ENABLE_RGB_MATRIX_PIXEL_FLOW
+#define ENABLE_RGB_MATRIX_PIXEL_RAIN
+
+#define ENABLE_RGB_MATRIX_TYPING_HEATMAP
+
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTIWIDE
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTICROSS
+#define ENABLE_RGB_MATRIX_SOLID_REACTIVE_MULTINEXUS
+#define ENABLE_RGB_MATRIX_MULTISPLASH
+#define ENABLE_RGB_MATRIX_SOLID_MULTISPLASH
