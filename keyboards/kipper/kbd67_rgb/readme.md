@@ -1,17 +1,20 @@
-# hl6095
+# kbd67_rgb
 
-A 60% multi-layout keyboard (there are 95 keys in total) with 1 RGB in capslock key.
+A 65% single-layout keyboard (there are 67 keys in total) with 1 RGB in capslock key.
 This keyboard use 25mhz HSE and STM32F411 as MCU.
+Using CH582F as bluetooth RF MCU.
+
+Based on hl6095
 
 - Keyboard Maintainer: https://github.com/KeyMagicHorse/qmk_firmware
 - Hardware Supported: hl6095
-- Hardware Availability: 
+- Hardware Availability:
 Make example for this keyboard (after setting up your build environment):
     ```
-    make keymagichorse/hl6095:default
+    make kipper/kbd67_rgb:default
     ```
     ```
-    make keymagichorse/hl6095:ble
+    make kipper/kbd67_rgb:ble
     ```
 See [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) then the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information.
 

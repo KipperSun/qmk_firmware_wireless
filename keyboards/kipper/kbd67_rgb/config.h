@@ -17,7 +17,7 @@
 
 
 #ifndef SERIAL_NUMBER
-#   define SERIAL_NUMBER "mjl_hl6095"
+#   define SERIAL_NUMBER "KBD67_rgb_ble"
 #endif
 
 /*******************************************************matrix********************************************************/

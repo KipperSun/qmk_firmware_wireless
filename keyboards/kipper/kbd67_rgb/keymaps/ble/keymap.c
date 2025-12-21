@@ -176,8 +176,8 @@ void lpm_device_power_close(void)
 
 
 //  每个通道的颜色 以及大写按键的颜色
-// HSV_BLUE        // 蓝牙 蓝色
-// HSV_PURPLE      // 大小写：紫色
+// HSV_BLUE        // 蓝牙：  蓝色
+// HSV_PURPLE      // 大小写：白色
 // HSV_RED         // 低电量：红色
 
 void rgb_matrix_all_black(void)
@@ -210,8 +210,8 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         // 一个大写灯
         if (host_keyboard_led_state().caps_lock) {
             // 一个大写灯
-            rgb_matrix_set_color(25, RGB_PURPLE);
-            // Q17 W18 E19 R20
+            rgb_matrix_set_color(25, 50,50,50); //白色
+            // Q52 W51 E50 R49
         }
     }
     // usb模式时，没有枚举成功，就强行灭灯
@@ -254,12 +254,12 @@ void wireless_ble_hanlde_kb(uint8_t host_index,uint8_t advertSta,uint8_t connect
     if(connectSta != 1 && advertSta == 1 && pairingSta == 1)
     {
         // 这里第一个参数使用host_index正好对应_rgb_layers的索引
-        rgb_matrix_blink(17 + host_index, RGB_BLUE, 0, 100, 100);
+        rgb_matrix_blink(52 - host_index, RGB_BLUE, 0, 100, 100);
     }
     // 蓝牙没有连接 && 蓝牙广播开启  && 蓝牙非配对模式
     else if(connectSta != 1 && advertSta == 1 && pairingSta == 0)
     {
-        rgb_matrix_blink(17 + host_index, RGB_BLUE, 0, 200, 300);
+        rgb_matrix_blink(52 - host_index, RGB_BLUE, 0, 200, 300);
     }
     else if(connectSta != 1 && advertSta == 0 && pairingSta == 0)
     {
@@ -268,7 +268,7 @@ void wireless_ble_hanlde_kb(uint8_t host_index,uint8_t advertSta,uint8_t connect
     // 蓝牙已连接
     if(connectSta == 1)
     {
-        rgb_matrix_blink(17 + host_index, RGB_BLUE, 5, 50, 50);
+        rgb_matrix_blink(52 - host_index, RGB_BLUE, 5, 50, 50);
     }
 #endif
 }
@@ -278,7 +278,7 @@ void wireless_rf24g_hanlde_kb(uint8_t connectSta,uint8_t pairingSta)
 # if defined(RGB_MATRIX_CUSTOM_BLINK_EFFECT)
     if(connectSta == 1)
     {
-        rgb_matrix_blink(20, RGB_BLUE, 5, 50, 50);
+        rgb_matrix_blink(49, RGB_BLUE, 5, 50, 50);
     }
 #endif
 }
@@ -291,22 +291,24 @@ void battery_percent_changed_kb(uint8_t level)
     if(level <= 10)
     {
         rgb_matrix_all_unblink();
-        rgb_matrix_blink(0, RGB_RED, 255, 500, 500);
+        rgb_matrix_blink(54, RGB_RED, 255, 500, 500);
     }
 #endif
 }
 
 // 将未使用的引脚设置为输入模拟
 // PS：在6095中，如果不加以下代码休眠时是102ua。如果加了就是30ua~32ua浮动
+// 但是在KBD67_RGB中，所有引脚都被占用，以下函数没用
 void lpm_set_unused_pins_to_input_analog(void)
 {
     // 禁用调试功能以降低功耗
     DBGMCU->CR &= ~DBGMCU_CR_DBG_SLEEP;   // 禁用在Sleep模式下的调试
     DBGMCU->CR &= ~DBGMCU_CR_DBG_STOP;    // 禁用在Stop模式下的调试
     DBGMCU->CR &= ~DBGMCU_CR_DBG_STANDBY; // 禁用在Standby模式下的调试
+
     // 在系统初始化代码中禁用SWD接口
-    palSetLineMode(A13, PAL_MODE_INPUT_ANALOG);
-    palSetLineMode(A14, PAL_MODE_INPUT_ANALOG);
+    // palSetLineMode(A13, PAL_MODE_INPUT_ANALOG);
+    // palSetLineMode(A14, PAL_MODE_INPUT_ANALOG);
 
     // palSetLineMode(A0, PAL_MODE_INPUT_ANALOG);
     // palSetLineMode(A1, PAL_MODE_INPUT_ANALOG);
