@@ -6,16 +6,15 @@ BOOTLOADER = stm32-dfu
 RGB_MATRIX_ENABLE = yes
 RGB_MATRIX_DRIVER = ws2812
 
-BOOTMAGIC_ENABLE ?= no     # Virtual DIP switch configuration(+1000)
+BOOTMAGIC_ENABLE ?= yes     # Virtual DIP switch configuration(+1000)
 MOUSEKEY_ENABLE ?= no      # Mouse keys(+4700)
-EXTRAKEY_ENABLE ?= no      # Audio control and System control(+450)
+EXTRAKEY_ENABLE ?= yes      # Audio control and System control(+450)
 CONSOLE_ENABLE ?= yes      # Console for debug(+400)
 COMMAND_ENABLE ?= yes      # Commands for debug and configuration
 SLEEP_LED_ENABLE ?= no     # Breathing sleep LED during USB suspend
 NKRO_ENABLE ?= yes         # USB Nkey Rollover
 BACKLIGHT_ENABLE ?= no     # Enable keyboard backlight functionality
 AUDIO_ENABLE ?= no
-BOOTMAGIC_ENABLE = no
 DEFERRED_EXEC_ENABLE = yes
 
 CUSTOM_MATRIX = lite

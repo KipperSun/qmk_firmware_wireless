@@ -1,10 +1,10 @@
 # kbd67_rgb
 
 A 65% single-layout keyboard (there are 67 keys in total) with 1 RGB in capslock key.
-This keyboard use 25mhz HSE and STM32F411 as MCU.
+This keyboard use 16MHz HSE and STM32F411 as MCU.
 Using CH582F as bluetooth RF MCU.
 
-Based on hl6095
+Totally Based on hl6095
 
 - Keyboard Maintainer: https://github.com/KeyMagicHorse/qmk_firmware
 - Hardware Supported: hl6095

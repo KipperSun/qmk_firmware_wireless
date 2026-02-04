@@ -61,7 +61,13 @@
 #define WS2812_BYTE_ORDER   WS2812_BYTE_ORDER_GRB
 #define WS2812_POWER_ON_LEVEL   1
 
+// ------------------------ 电池分压电阻的配置 ------------------------
 
+// Upper side resitor value (uint: KΩ)
+#    define BAT_R_UPPER 100
+
+// Lower side resitor value (uint: KΩ)
+#    define BAT_R_LOWER 330
 
 #    define WS2812_PWM_DRIVER PWMD5  // default: PWMD2
 #    define WS2812_PWM_CHANNEL 1  // default: 2
