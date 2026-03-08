@@ -99,6 +99,24 @@ int km_printf(const char* format, ...) {
             km_putchar("0123456789abcdef"[value & 0x0F]);
             count += 8;
         }
+       else if (*format == '%' && format[1] == '0' && format[2] == '2' && format[3] == 'd') {
+            format += 3;
+            unsigned int value = va_arg(args, unsigned int);
+            
+            km_putchar('0' + ((value / 10) % 10));
+            km_putchar('0' + (value % 10));
+            count += 2;
+        }
+        else if (*format == '%' && format[1] == '0' && format[2] == '4' && format[3] == 'd') {
+            format += 3;
+            unsigned int value = va_arg(args, unsigned int);
+            
+            km_putchar('0' + ((value / 1000) % 10));
+            km_putchar('0' + ((value / 100) % 10));
+            km_putchar('0' + ((value / 10) % 10));
+            km_putchar('0' + (value % 10));
+            count += 4;
+        }
         else {
             km_putchar(*format);
             count++;

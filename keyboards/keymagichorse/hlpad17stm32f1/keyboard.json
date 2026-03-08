@@ -28,7 +28,7 @@
     "debounce": 10,
     "matrix_pins": {
         "cols": ["C13", "C14", "B8", "B3"],
-        "rows": ["B14", "B13", "A13", "A15", "B9"]
+        "rows": ["B14", "B12", "A13", "A15", "B9"]
     },
     "rgb_matrix": {
         "animations": {
@@ -52,6 +52,7 @@
     },
     "ws2812": {
         "pin": "A9"
+        // "driver": "pwm"
     },
     "diode_direction": "ROW2COL",
     "layouts": {
