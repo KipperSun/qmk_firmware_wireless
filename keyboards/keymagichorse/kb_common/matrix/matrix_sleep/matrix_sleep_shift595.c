@@ -49,7 +49,7 @@ void matrix_sleepConfig(void)
         } 
         ATOMIC_BLOCK_FORCEON {
             gpio_set_pin_input_high(wakeUpCol_pins[i]);
-            palEnableLineEvent(wakeUpCol_pins[i], PAL_EVENT_MODE_RISING_EDGE);
+            palEnableLineEvent(wakeUpCol_pins[i], PAL_EVENT_MODE_FALLING_EDGE);
         }
     }
     for (i = 0; i < matrix_rows(); i++)
@@ -74,7 +74,7 @@ void matrix_sleepConfig(void)
         } 
         ATOMIC_BLOCK_FORCEON {
             gpio_set_pin_input_high(wakeUpRow_pins[i]);
-            palEnableLineEvent(wakeUpRow_pins[i], PAL_EVENT_MODE_RISING_EDGE);
+            palEnableLineEvent(wakeUpRow_pins[i], PAL_EVENT_MODE_FALLING_EDGE);
         }
     }
 

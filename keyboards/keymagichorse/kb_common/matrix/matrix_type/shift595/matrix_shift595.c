@@ -184,13 +184,13 @@ bool matrix_scan_custom(matrix_row_t current_matrix[])
     shift595_bit(0);
     for (uint8_t i = 0; i < num_585; i++)
     {
-        wait_us(5);
+        // wait_us(1);
 
         if (i < COL_TO_74HC595_PINS_COUNT)
         {
             int8_t col = HC595_PIN_TO_COL[i];
             // 校验col是否合法
-            if (col >= 0 && col < MATRIX_COLS)
+            if (col >= 0 && col < MATRIX_COLS && col != 0xff)
             {
                 is_scan_col[col] = true;
 
@@ -210,7 +210,7 @@ bool matrix_scan_custom(matrix_row_t current_matrix[])
             if (!select_col(col))
                 continue;
 
-            wait_us(5);
+            // wait_us(1);
 
             matrix_read_rows_on_col(curr_matrix, col);
 

@@ -34,7 +34,7 @@ void shift595_pin_sleep(void)
 }
 
 void shift595_write_all(shift595_data_t data) {
-    ATOMIC_BLOCK_FORCEON {
+    // ATOMIC_BLOCK_FORCEON {
         // 从高位芯片开始输出（最后一个芯片先移入）
         for (int8_t chip = I_595_NUM - 1; chip >= 0; chip--) {
             uint8_t byteOut = (uint8_t)(data >> (chip * 8));
@@ -62,7 +62,7 @@ void shift595_write_all(shift595_data_t data) {
         
         gpio_write_pin_low(STCP_PIN_74HC595);
         
-    }
+    // }
 }
 
 void shift595_write_pin_ex(uint8_t pin_index, uint8_t level, uint8_t other_level) {
