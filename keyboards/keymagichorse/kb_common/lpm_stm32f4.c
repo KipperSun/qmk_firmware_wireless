@@ -187,6 +187,8 @@ void enter_low_power_mode_prepare(void)
     lpm_device_power_open();    // 外围设备 电源 关闭
   
     gpio_write_pin_high(BHQ_INT_PIN);
+    report_keyboard_t report = {0};
+    bluetooth_send_keyboard(&report);   // 往里面填充一个空的按键包
 }
 
 void lpm_via_activity_update(void)
