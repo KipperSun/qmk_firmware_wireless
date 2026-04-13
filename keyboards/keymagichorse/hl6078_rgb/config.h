@@ -93,10 +93,12 @@
 #define WS2812_POWER_ON_LEVEL   1  
 
 #define RGB_MATRIX_LED_FLUSH_LIMIT 30
+#define WS2812_TRST_US      380
 #define WS2812_BYTE_ORDER   WS2812_BYTE_ORDER_GRB
+
 #define WS2812_PWM_DRIVER   PWMD3  // default: PWMD2
 #define WS2812_PWM_CHANNEL  2  // default: 2
 #define WS2812_PWM_PAL_MODE 2  // Pin "alternate function", see the respective datasheet for the appropriate values for your MCU. default: 2
 #define WS2812_DMA_STREAM   STM32_DMA1_STREAM2  // DMA Stream for TIMx_UP, see the respective reference manual for the appropriate values for your MCU.
 #define WS2812_DMA_CHANNEL  5  // DMA Channel for TIMx_UP, see the respective reference manual for the appropriate values for your MCU.
-#define WS2812_TRST_US      380
+
