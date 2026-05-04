@@ -47,13 +47,6 @@ static uint32_t rtc_wakeup_timer = 0;
     static const pin_t wakeUpRow_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
 #endif
 
-#define RTC_CHECK_TIME_MS (150)
-static uint32_t rtc_wakeup_end_check_timer  = 0;
-static uint32_t rtc_wakeup_begin_check_timer = 0; // rtc开始校准时间
-static uint32_t rtc_wakeup_check_timeout = 0;   // 校准超时计时器
-// 系统首次上电，rtc校准
-static uint8_t rtc_first_boot_calibrated = 0;   // 0准备开始校准  1校准中 2校准结束 3等个延时打印一下就休眠
-static float rtc_calr_val = 0;   // 校准值
 
 __attribute__((weak)) void lpm_device_power_open(void) {}
 __attribute__((weak)) void lpm_device_power_close(void) {}
@@ -81,39 +74,7 @@ static inline uint32_t rtc_wakeup_calc(uint32_t ms)
     return wutr;
 }
 
-void rtc_time_check(void);
-static void rtc_call_back(RTCDriver *rtcp, rtcevent_t event) 
-{
-    if(rtc_first_boot_calibrated == 1)
-    {
-        rtc_wakeup_end_check_timer = sync_timer_read32();
-        int32_t diff = (int32_t)(rtc_wakeup_end_check_timer - rtc_wakeup_begin_check_timer)
-                    - (int32_t)RTC_CHECK_TIME_MS;
-        rtc_calr_val = rtc_calr_val +  ((float)diff / (float)RTC_CHECK_TIME_MS);
-        km_printf(
-            "rtc_wakeup_begin_check_timer:%d rtc_wakeup_end_check_timer:%d real:%d diff:%d calr_val:%.9f\r\n",
-            rtc_wakeup_begin_check_timer,
-            rtc_wakeup_end_check_timer,
-            (rtc_wakeup_end_check_timer - rtc_wakeup_begin_check_timer),
-            diff,
-            rtc_calr_val
-        );
-        rtc_first_boot_calibrated = 2;   // 校准结束
-    }
-}
 
-void rtc_time_check(void)
-{
-    RTCWakeup wakeupspec;
-    float factor = 1.0f + rtc_calr_val;
-    wakeupspec.wutr = rtc_wakeup_calc((uint32_t)((float)RTC_CHECK_TIME_MS / factor));   // 用校准的值去做校准
-    rtcSTM32SetPeriodicWakeup(&RTCD1, &wakeupspec);
-    rtcSetCallback(&RTCD1, rtc_call_back);
-    // 记录开始校准时间
-    rtc_wakeup_begin_check_timer = sync_timer_read32(); 
-    rtc_first_boot_calibrated = 1;
-    km_printf("rtc_wakeup_begin_check_timer:%d\r\n",rtc_wakeup_begin_check_timer);
-}
 void rtc_wakeup_set(void)
 {
     RTCWakeup wakeupspec;
@@ -126,8 +87,7 @@ void rtc_wakeup_set(void)
     // 30分钟后
     else 
     {
-        float factor = 1.0f + rtc_calr_val;
-        wakeupspec.wutr = rtc_wakeup_calc((uint32_t)(150.0f / factor));
+        wakeupspec.wutr = rtc_wakeup_calc(150);
         rtc_wakeup_timer+=150;
     }
     rtcSTM32SetPeriodicWakeup(&RTCD1, &wakeupspec);
@@ -348,67 +308,9 @@ void lpm_task(void)
         lpm_time_up = false;
         lpm_timer_buffer = 0;
         enter_low_power_mode_prepare();
-        static uint32_t last = 0;
 // rtc唤醒逻辑 start 
         while(1)
         {
-        // RTC 校准
-            if (rtc_first_boot_calibrated == 0) 
-            {
-                chSysLock();
-                    stm32_clock_init();
-                    // halInit();
-                    /* Initializes the OS Abstraction Layer.*/
-                    osalInit();
-                    /* Platform low level initializations.*/
-                    hal_lld_init();
-                    #if (HAL_USE_PAL == TRUE) || defined(__DOXYGEN__)
-                    #if defined(PAL_NEW_INIT)
-                        palInit();
-                    #else
-                        palInit(&pal_default_config);
-                    #endif
-                    #endif
-                    #if (HAL_USE_UART == TRUE) || defined(__DOXYGEN__)
-                        uartInit();
-                    #endif
-                    #if OSAL_ST_MODE != OSAL_ST_MODE_NONE
-                        stInit();
-                    #endif
-                    timer_init();
-                chSysUnlock();
-                bhq_init();     // uart_init
-                rtc_time_check();
-                rtc_wakeup_check_timeout = sync_timer_read32();
-                continue;
-            }
-            if(sync_timer_elapsed32(rtc_wakeup_check_timeout) > RTC_CHECK_TIME_MS*2)
-            {
-                rtc_wakeup_check_timeout = 0;
-                rtc_first_boot_calibrated = 2;   // 校准超时，直接当做校准完成
-                km_printf("rtc wakeup check timeout\r\n");
-            }
-
-            if(rtc_first_boot_calibrated == 1)  // 校准中不允许休眠
-            {
-                continue;
-            }
-            if(rtc_first_boot_calibrated == 2)  
-            {
-                wait_ms(10);
-                rtc_first_boot_calibrated = 3;
-            }
-            if(rtc_first_boot_calibrated == 3)  
-            {
-                if (rtc_wakeup_timer  >= (30 * 60 * 1000) && rtc_wakeup_timer - last >= (30 * 60 * 1000))
-                {
-                    last +=  (30 * 60 * 1000);
-                    rtc_first_boot_calibrated = 0;
-                }
-            }
-        // RTC 校准
-
-            // 校准时间内可以唤醒
             if(lowpower_matrix_task() == true)
             {
                 break;
@@ -420,7 +322,7 @@ void lpm_task(void)
             enter_low_power_mode_prepare();
         }
 // rtc唤醒逻辑 end 
-        last = 0;
         exit_low_power_mode_prepare();
     }
 }
+ 
