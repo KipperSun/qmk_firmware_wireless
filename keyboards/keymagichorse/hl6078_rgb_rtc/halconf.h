@@ -15,7 +15,22 @@
  */
 
 #pragma once
-#include "print.h"
+#define PAL_USE_CALLBACKS   TRUE
+#define HAL_USE_PAL         TRUE           
+#define PAL_USE_WAIT        TRUE  
 
-void km_printf_init(void);
-int km_printf(const char* format, ...);
+#undef HAL_USE_ADC
+#define HAL_USE_ADC         TRUE
+
+#undef HAL_USE_PWM
+#define HAL_USE_PWM         TRUE
+
+// ****************************** RTC ******************************
+#undef HAL_USE_RTC
+#define HAL_USE_RTC         TRUE
+#undef STM32_RTC_HAS_PERIODIC_WAKEUPS
+#define STM32_RTC_HAS_PERIODIC_WAKEUPS  TRUE
+// ****************************** RTC ******************************
+
+#include_next <halconf.h>
+

@@ -17,7 +17,6 @@ endif
 ifeq ($(strip $(KB_DEBUG)), uart_bhq)
 	OPT_DEFS += -DKB_DEBUG_UART_BHQ
 	OPT_DEFS += -DKB_DEBUG
-# 
 endif   
 
 # 矩阵扫描相关
@@ -69,7 +68,7 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
                 SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}_at32.c
             endif
 
-            ifneq ($(filter $(KB_LPM_DRIVER), lpm_stm32f4 lpm_stm32f1_rtc_mx_v1 lpm_stm32f1),)
+            ifneq ($(filter $(KB_LPM_DRIVER), lpm_stm32f4 lpm_stm32f1_rtc_mx_v1 lpm_stm32f4_rtc_mx_v1 lpm_stm32f1),)
                 SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}_stm32.c
             endif
         else

@@ -25,7 +25,7 @@
 #include "report_buffer.h"
 #include "uart.h"
 #include "bhq_common.h"
-
+#include "matrix_sleep.h"
 #include "km_analog.h"
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
@@ -36,36 +36,110 @@ static uint32_t     lpm_timer_buffer    = 0;
 static bool         lpm_time_up         = false;
 static bool         lpm_usb_init_flag   = false;
 
-bool is_lpm_via_activity_flag = false;
-uint32_t lpm_via_activity_timer = 0;
+static bool is_lpm_via_activity_flag = false;
+static uint32_t lpm_via_activity_timer = 0;
 
-static inline uint32_t rtc_wakeup_calc(uint32_t ms) {
-    uint32_t wutr = 0;
+static uint32_t rtc_wakeup_timer = 0;
 
-    if (ms >= 1000) {
-        // 用 1Hz 时钟，单位 = 秒
-        uint32_t sec = (ms + 999) / 1000;  // 四舍五入
-        wutr = ((uint32_t)4 << 16) | (sec - 1);
+#if (DIODE_DIRECTION == COL2ROW)
+    static const pin_t wakeUpCol_pins[MATRIX_COLS]   = MATRIX_COL_PINS;
+#elif (DIODE_DIRECTION == ROW2COL)
+    static const pin_t wakeUpRow_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
+#endif
+
+#define RTC_CHECK_TIME_MS (150)
+static uint32_t rtc_wakeup_end_check_timer  = 0;
+static uint32_t rtc_wakeup_begin_check_timer = 0; // rtc开始校准时间
+static uint32_t rtc_wakeup_check_timeout = 0;   // 校准超时计时器
+// 系统首次上电，rtc校准
+static uint8_t rtc_first_boot_calibrated = 0;   // 0准备开始校准  1校准中 2校准结束 3等个延时打印一下就休眠
+static float rtc_calr_val = 0;   // 校准值
+
+__attribute__((weak)) void lpm_device_power_open(void) {}
+__attribute__((weak)) void lpm_device_power_close(void) {}
+// 将未使用的引脚设置为输入模拟
+__attribute__((weak)) void lpm_set_unused_pins_to_input_analog(void){}
+
+static inline uint32_t rtc_wakeup_calc(uint32_t ms)
+{
+    uint32_t wutr;
+
+    if (ms <= 1000) {
+        uint32_t ticks = (ms * 2048 + 500) / 1000;
+        if (ticks == 0) {
+            ticks = 1;
+        }
+        wutr = (0U << 16) | (ticks - 1);
     } else {
-        // 用 RTC/16 (~2.048 kHz)，单位 ≈ 0.488ms
-        uint32_t ticks = (ms * 2048 + 999) / 1000; // 四舍五入成 tick
-        if (ticks == 0) ticks = 1;
-        wutr = ((uint32_t)0 << 16) | (ticks - 1);
+        uint32_t sec = ms / 1000;
+        if (sec == 0) {
+            sec = 1;
+        }
+        wutr = (4U << 16) | (sec - 1);
     }
 
     return wutr;
 }
 
-void ws2812power_enabled(void);
-void ws2812power_Disabled(void);
+void rtc_time_check(void);
+static void rtc_call_back(RTCDriver *rtcp, rtcevent_t event) 
+{
+    if(rtc_first_boot_calibrated == 1)
+    {
+        rtc_wakeup_end_check_timer = sync_timer_read32();
+        int32_t diff = (int32_t)(rtc_wakeup_end_check_timer - rtc_wakeup_begin_check_timer)
+                    - (int32_t)RTC_CHECK_TIME_MS;
+        rtc_calr_val = rtc_calr_val +  ((float)diff / (float)RTC_CHECK_TIME_MS);
+        km_printf(
+            "rtc_wakeup_begin_check_timer:%d rtc_wakeup_end_check_timer:%d real:%d diff:%d calr_val:%.9f\r\n",
+            rtc_wakeup_begin_check_timer,
+            rtc_wakeup_end_check_timer,
+            (rtc_wakeup_end_check_timer - rtc_wakeup_begin_check_timer),
+            diff,
+            rtc_calr_val
+        );
+        rtc_first_boot_calibrated = 2;   // 校准结束
+    }
+}
+
+void rtc_time_check(void)
+{
+    RTCWakeup wakeupspec;
+    float factor = 1.0f + rtc_calr_val;
+    wakeupspec.wutr = rtc_wakeup_calc((uint32_t)((float)RTC_CHECK_TIME_MS / factor));   // 用校准的值去做校准
+    rtcSTM32SetPeriodicWakeup(&RTCD1, &wakeupspec);
+    rtcSetCallback(&RTCD1, rtc_call_back);
+    // 记录开始校准时间
+    rtc_wakeup_begin_check_timer = sync_timer_read32(); 
+    rtc_first_boot_calibrated = 1;
+    km_printf("rtc_wakeup_begin_check_timer:%d\r\n",rtc_wakeup_begin_check_timer);
+}
+void rtc_wakeup_set(void)
+{
+    RTCWakeup wakeupspec;
+    // 10分钟内 50ms唤醒一次
+    if (rtc_wakeup_timer < 10 * 60 * 1000) 
+    {
+        wakeupspec.wutr = rtc_wakeup_calc(50);
+        rtc_wakeup_timer+=50;
+    }
+    // 30分钟后
+    else 
+    {
+        float factor = 1.0f + rtc_calr_val;
+        wakeupspec.wutr = rtc_wakeup_calc((uint32_t)(150.0f / factor));
+        rtc_wakeup_timer+=150;
+    }
+    rtcSTM32SetPeriodicWakeup(&RTCD1, &wakeupspec);
+    rtcSetCallback(&RTCD1, NULL);
+}
+
 
 void lpm_timer_reset(void) {
     lpm_time_up      = false;
     lpm_timer_buffer = 0;
 }
 
-__attribute__((weak)) void lpm_device_power_open(void) ;
-__attribute__((weak)) void lpm_device_power_close(void) ;
 
 void lpm_init(void)
 {
@@ -75,29 +149,13 @@ void lpm_init(void)
     DBGMCU->CR &= ~DBGMCU_CR_DBG_STANDBY; // 禁用在Standby模式下的调试
 
     lpm_timer_reset();
-
-    // gpio_write_pin_high(BHQ_INT_PIN);
-
     // usb
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
     palEnableLineEvent(USB_POWER_SENSE_PIN, PAL_EVENT_MODE_RISING_EDGE);
     lpm_usb_init_flag   = true;
 
     lpm_device_power_open();
-}
-__attribute__((weak)) void lpm_device_power_open(void) 
-{
-   
-}
-__attribute__((weak)) void lpm_device_power_close(void) 
-{
-   
-}
-
-// 将未使用的引脚设置为输入模拟
-__attribute__((weak)) void lpm_set_unused_pins_to_input_analog(void)
-{
-
+    rtc_wakeup_timer = 0;
 }
 
 void My_PWR_EnterSTOPMode(void)
@@ -134,23 +192,13 @@ void enter_low_power_mode_prepare(void)
     {
        return;
     }
-    // lpm_set_unused_pins_to_input_analog();    // 设置没有使用的引脚为模拟输入
+    lpm_set_unused_pins_to_input_analog();    // 设置没有使用的引脚为模拟输入
+    matrix_rtc_Config();    // 这里配置了mx 的输出引脚，然后给rtc唤醒读取
+    rtc_wakeup_set();
 
-    // cancel_all_mux_channel();
-    // for (uint8_t row = 0; row < MATRIX_ROWS; row++)
-    // {
-    //     clear_row_pin(row);
-    // }
-    // gpio_write_pin_low(ECOUT_EN_PIN);
-// rtc唤醒
-    RTCWakeup wakeupspec;
-    wakeupspec.wutr = rtc_wakeup_calc(500);
-    rtcSTM32SetPeriodicWakeup(&RTCD1, &wakeupspec);
-    rtcSetCallback(&RTCD1, NULL);
-// rtc唤醒
 
     gpio_set_pin_input_low(BHQ_IQR_PIN);
-    // palEnableLineEvent(BHQ_IQR_PIN, PAL_EVENT_MODE_RISING_EDGE);
+    palEnableLineEvent(BHQ_IQR_PIN, PAL_EVENT_MODE_RISING_EDGE);
     gpio_write_pin_low(BHQ_INT_PIN);
 
 // usb 插入检测
@@ -180,6 +228,7 @@ void lpm_via_activity_update(void)
 
 void exit_low_power_mode_prepare(void)
 {
+    rtc_wakeup_timer = 0;   // 清空RTC计时器 
     chSysLock();
         stm32_clock_init();
         halInit();
@@ -219,9 +268,43 @@ void exit_low_power_mode_prepare(void)
     gpio_write_pin_high(BHQ_INT_PIN);
 }
 
+
 bool lowpower_matrix_task(void) 
 {
-    return false;
+    bool any_key_pressed = false; 
+
+    uint8_t i = 0;
+#if (DIODE_DIRECTION == COL2ROW)
+    // Set row(low valid), read cols
+    for (i = 0; i < matrix_cols(); i++)
+    { // set col pull-up input
+        if(wakeUpCol_pins[i] == NO_PIN)
+        {
+            continue;
+        } 
+        if(gpio_read_pin(wakeUpCol_pins[i]) == 0 )
+        {
+            any_key_pressed = true; 
+            return any_key_pressed; 
+        }
+    }
+#elif (DIODE_DIRECTION == ROW2COL)
+    // 读取row 有一行是低电平那就唤醒
+    // Set col(low valid), read rows
+    for (i = 0; i < matrix_rows(); i++)
+    { // set row pull-up input
+        if(wakeUpRow_pins[i] == NO_PIN)
+        {
+            continue;
+        } 
+        if(gpio_read_pin(wakeUpRow_pins[i]) == 0 )
+        {
+            any_key_pressed = true; 
+            return any_key_pressed; 
+        }
+    }
+#endif
+    return any_key_pressed; 
 }
 
 void lpm_task(void)
@@ -240,11 +323,6 @@ void lpm_task(void)
        return;
     }
 
-    
-    if (usb_power_connected()) 
-    {
-       return;
-    }
 
     if(report_buffer_is_empty() == false)
     {
@@ -253,6 +331,13 @@ void lpm_task(void)
         return;
     }
 
+    if(wireless_get() == WT_STATE_ADV_UNPAIRED || wireless_get() == WT_STATE_ADV_PAIRING)
+    {
+        lpm_time_up = false;
+        lpm_timer_buffer = 0;
+        return;
+    }
+    
     if(lpm_time_up == false && lpm_timer_buffer == 0)
     {
         lpm_time_up = true;
@@ -263,21 +348,79 @@ void lpm_task(void)
         lpm_time_up = false;
         lpm_timer_buffer = 0;
         enter_low_power_mode_prepare();
+        static uint32_t last = 0;
 // rtc唤醒逻辑 start 
-        // uint8_t temp_cut = 0;
-        // uint8_t w_init_flag = 0;
         while(1)
         {
-            chSysLock();
-            stm32_clock_init();
-            halInit();
-            stInit();
-            timer_init();
-            chSysUnlock();
-            wait_ms(10);
+        // RTC 校准
+            if (rtc_first_boot_calibrated == 0) 
+            {
+                chSysLock();
+                    stm32_clock_init();
+                    // halInit();
+                    /* Initializes the OS Abstraction Layer.*/
+                    osalInit();
+                    /* Platform low level initializations.*/
+                    hal_lld_init();
+                    #if (HAL_USE_PAL == TRUE) || defined(__DOXYGEN__)
+                    #if defined(PAL_NEW_INIT)
+                        palInit();
+                    #else
+                        palInit(&pal_default_config);
+                    #endif
+                    #endif
+                    #if (HAL_USE_UART == TRUE) || defined(__DOXYGEN__)
+                        uartInit();
+                    #endif
+                    #if OSAL_ST_MODE != OSAL_ST_MODE_NONE
+                        stInit();
+                    #endif
+                    timer_init();
+                chSysUnlock();
+                bhq_init();     // uart_init
+                rtc_time_check();
+                rtc_wakeup_check_timeout = sync_timer_read32();
+                continue;
+            }
+            if(sync_timer_elapsed32(rtc_wakeup_check_timeout) > RTC_CHECK_TIME_MS*2)
+            {
+                rtc_wakeup_check_timeout = 0;
+                rtc_first_boot_calibrated = 2;   // 校准超时，直接当做校准完成
+                km_printf("rtc wakeup check timeout\r\n");
+            }
+
+            if(rtc_first_boot_calibrated == 1)  // 校准中不允许休眠
+            {
+                continue;
+            }
+            if(rtc_first_boot_calibrated == 2)  
+            {
+                wait_ms(10);
+                rtc_first_boot_calibrated = 3;
+            }
+            if(rtc_first_boot_calibrated == 3)  
+            {
+                if (rtc_wakeup_timer  >= (30 * 60 * 1000) && rtc_wakeup_timer - last >= (30 * 60 * 1000))
+                {
+                    last +=  (30 * 60 * 1000);
+                    rtc_first_boot_calibrated = 0;
+                }
+            }
+        // RTC 校准
+
+            // 校准时间内可以唤醒
+            if(lowpower_matrix_task() == true)
+            {
+                break;
+            }
+            if(usb_power_connected()) 
+            {
+                break;
+            }
             enter_low_power_mode_prepare();
         }
 // rtc唤醒逻辑 end 
+        last = 0;
         exit_low_power_mode_prepare();
     }
 }

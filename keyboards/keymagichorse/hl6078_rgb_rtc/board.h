@@ -13,9 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #pragma once
-#include "print.h"
 
-void km_printf_init(void);
-int km_printf(const char* format, ...);
+#include_next <board.h>
+
+#undef STM32_HSECLK
+#define STM32_HSECLK 16000000
+// #define STM32_HSECLK 25000000
+
