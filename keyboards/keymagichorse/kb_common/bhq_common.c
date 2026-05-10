@@ -165,6 +165,10 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                 // 切换到usb模式 并 关闭蓝牙广播
                 bhq_CloseBleAdvertising();
                 transport_set(KB_TRANSPORT_USB);  
+                clear_mods();
+                clear_oneshot_mods();
+                clear_weak_mods();
+                send_keyboard_report();
             }
             return true;
         }
@@ -204,7 +208,7 @@ void bhq_switch_host_task(void){
                     key_ble_host_index = 2;
                     break;
             }
-            // km_printf("key long down:bleid->%d\n",key_ble_host_index);
+            km_printf("key long down:bleid->%d\n",key_ble_host_index);
             // 打开配对广播
             bhq_SetPairingMode(key_ble_host_index, 30);
             transport_set(key_ble_host_index + KB_TRANSPORT_BLUETOOTH_1);  
@@ -261,40 +265,3 @@ void bhq_wireless_task(void)
 #endif
 }
 
-// Keyboard level code can override this, but shouldn't need to.
-// Controlling custom features should be done by overriding
-// via_custom_value_command_kb() instead.
-bool via_command_bhq(uint8_t *data, uint8_t length) {
-    // 此逻辑删除 会失去蓝牙模块升级功能 以及蓝牙改键功能 ！
-    uint8_t command_id   = data[0];
-
-#   if defined(KB_LPM_ENABLED)
-    lpm_timer_reset();  // 这里用于低功耗，刷新低功耗计时器
-    lpm_via_activity_update();
-#endif
-
-    // uint8_t i = 0;
-    // km_printf("cmdid:%02x  length:%d\r\n",command_id,length);
-    // km_printf("read host app of data \r\n[");
-    // for (i = 0; i < length; i++)
-    // {
-    //     km_printf("%02x ",data[i]);
-    // }
-    // km_printf("]\r\n");
-
-    if(command_id == 0xF1)
-    {
-        // cmdid + 2 frame headers 
-        // The third one is isack the fourth one is length and the fifth one is data frame
-        BHQ_SendCmd(0, &data[4], data[3]);
-        return true;
-    }
-    // 让QMK键盘强制设置为USB模式
-    if(command_id == 0xF2)
-    {
-        transport_set(KB_TRANSPORT_USB);
-        host_raw_hid_send(data,length);
-        return true;
-    }
-    return false;
-}
