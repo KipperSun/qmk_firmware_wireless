@@ -22,12 +22,19 @@
 #include "transport.h"
 #include "battery.h"
 #include "km_printf.h"
+
+# if defined(KB_LPM_ENABLED)
+#   include "lpm.h"
+#endif
+
 #ifdef RAW_ENABLE
 #   include "raw_hid.h"
 #endif
+
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
 #endif
+
 // 这里用于处理连接的回调
 static wt_state_t wt_state = WT_STATE_INITIALIZED;  // 默认初始化
 
@@ -155,6 +162,11 @@ void BHQ_Protocol_Process_user(uint8_t *dat, uint16_t length)
     uint8_t cmdid = 0;
     uint8_t hid_data[32] = {0};
     
+#   if defined(KB_LPM_ENABLED)
+    lpm_timer_reset();  // 这里用于低功耗，刷新低功耗计时器
+    lpm_via_activity_update();
+#endif
+
     cmdid = dat[3];
     switch(cmdid)
     {
