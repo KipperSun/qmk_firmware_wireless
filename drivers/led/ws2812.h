@@ -53,7 +53,8 @@
  * component revisions require a minimum of 280us.
  */
 #if !defined(WS2812_TRST_US)
-#    define WS2812_TRST_US 280
+// #    define WS2812_TRST_US 280
+#    define WS2812_TRST_US 380
 #endif
 
 #if defined(RGBLIGHT_WS2812)
