@@ -5,7 +5,7 @@ VPATH += ${KB_COMMON_DIR}
 
 # 日记类型 不写默认就是不打开 uart是借用蓝牙的串口的简单调试可以
 # rtt这个低功耗之后可能就用不了了，用起来就很麻烦，所以添加了uart借用bhq的串口用一下
-KB_DEBUG ?= not_debug
+KB_DEBUG ?= no
 SRC+= kb_common/km_printf.c
 ifeq ($(strip $(KB_DEBUG)), rtt)
 	OPT_DEFS += -DKB_DEBUG
@@ -17,6 +17,10 @@ endif
 ifeq ($(strip $(KB_DEBUG)), uart_bhq)
 	OPT_DEFS += -DKB_DEBUG_UART_BHQ
 	OPT_DEFS += -DKB_DEBUG
+endif   
+ifeq ($(strip $(KB_DEBUG)), no)
+    OPT_DEFS += -DNO_PRINT
+    OPT_DEFS += -DNO_DEBUG
 endif   
 
 # 矩阵扫描相关
