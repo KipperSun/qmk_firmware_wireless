@@ -38,8 +38,7 @@ void board_init(void)
     lpm_init();
 #   endif
 #endif
-    gpio_set_pin_output(OPAMP_EN_PIN);    
-    gpio_write_pin_high(OPAMP_EN_PIN);
+
 }
 
 void housekeeping_task_kb(void) {

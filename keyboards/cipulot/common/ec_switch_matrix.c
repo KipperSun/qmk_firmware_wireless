@@ -29,6 +29,7 @@
 
 eeprom_ec_config_t eeprom_ec_config;
 ec_config_t        ec_config;
+static uint32_t matrix_debug_timer = 0;
 
 // Pin and port array
 const pin_t row_pins[]                                 = MATRIX_ROW_PINS;
@@ -55,6 +56,16 @@ _Static_assert(ARRAY_SIZE(amux_n_col_sizes) == AMUX_COUNT, "AMUX_COL_CHANNELS_SI
 static uint16_t sw_value[MATRIX_ROWS][MATRIX_COLS];
 
 static adc_mux adcMux;
+
+#ifdef OPAMP_EN_PIN
+    #if OPAMP_EN_ACTIVE
+        #define OPAMP_ENABLE()  gpio_write_pin_high(OPAMP_EN_PIN)
+        #define OPAMP_DISABLE() gpio_write_pin_low(OPAMP_EN_PIN)
+    #else
+        #define OPAMP_ENABLE()  gpio_write_pin_low(OPAMP_EN_PIN)
+        #define OPAMP_DISABLE() gpio_write_pin_high(OPAMP_EN_PIN)
+    #endif
+#endif
 
 // Initialize the row pins
 void init_row(void) {
@@ -151,12 +162,19 @@ int ec_init(void) {
 
     // Initialize AMUXs
     init_amux();
+#ifdef OPAMP_EN_PIN
+    gpio_set_pin_output(OPAMP_EN_PIN);    
+    OPAMP_DISABLE();
+#endif
 
     return 0;
 }
 
 // Get the noise floor
 void ec_noise_floor(void) {
+#ifdef OPAMP_EN_PIN
+    OPAMP_ENABLE();
+#endif
     // Initialize the noise floor
     for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
         for (uint8_t col = 0; col < MATRIX_COLS; col++) {
@@ -191,12 +209,19 @@ void ec_noise_floor(void) {
             ec_config.noise_floor[row][col] /= DEFAULT_NOISE_FLOOR_SAMPLING_COUNT;
         }
     }
+#ifdef OPAMP_EN_PIN
+    OPAMP_DISABLE();
+#endif
 }
 
 // Scan key values and update matrix state
 bool ec_matrix_scan(matrix_row_t current_matrix[]) {
     bool updated = false;
-
+#ifdef OPAMP_EN_PIN
+    OPAMP_ENABLE();
+    // 空转一下
+    for (uint8_t null_cut = 0; null_cut < MATRIX_COLS; null_cut++);
+#endif
     for (uint8_t amux = 0; amux < AMUX_COUNT; amux++) {
         disable_unused_amux(amux);
         for (uint8_t col = 0; col < amux_n_col_sizes[amux]; col++) {
@@ -224,7 +249,14 @@ bool ec_matrix_scan(matrix_row_t current_matrix[]) {
             }
         }
     }
-
+#ifdef OPAMP_EN_PIN
+    OPAMP_DISABLE();
+#endif
+    if (timer_elapsed32(matrix_debug_timer) > 500)     // 1分钟
+    {
+        matrix_debug_timer = timer_read32();
+        // ec_print_matrix();
+    }
     return ec_config.bottoming_calibration ? false : updated;
 }
 
@@ -258,7 +290,7 @@ bool ec_update_key(matrix_row_t* current_row, uint8_t row, uint8_t col, uint16_t
 
     // Real Time Noise Floor Calibration
     if (sw_value < (ec_config.noise_floor[row][col] - NOISE_FLOOR_THRESHOLD)) {
-        uprintf("Noise Floor Change: %d, %d, %d\n", row, col, sw_value);
+        // uprintf("Noise Floor Change: %d, %d, %d\n", row, col, sw_value);
         ec_config.noise_floor[row][col]                             = sw_value;
         ec_config.rescaled_mode_0_actuation_threshold[row][col]     = rescale(ec_config.mode_0_actuation_threshold, 0, 1023, ec_config.noise_floor[row][col], eeprom_ec_config.bottoming_reading[row][col]);
         ec_config.rescaled_mode_0_release_threshold[row][col]       = rescale(ec_config.mode_0_release_threshold, 0, 1023, ec_config.noise_floor[row][col], eeprom_ec_config.bottoming_reading[row][col]);
@@ -269,12 +301,12 @@ bool ec_update_key(matrix_row_t* current_row, uint8_t row, uint8_t col, uint16_t
     if (ec_config.actuation_mode == 0) {
         if (current_state && sw_value < ec_config.rescaled_mode_0_release_threshold[row][col]) {
             *current_row &= ~(1 << col);
-            uprintf("Key released: %d, %d, %d\n", row, col, sw_value);
+            // uprintf("Key released: %d, %d, %d\n", row, col, sw_value);
             return true;
         }
         if ((!current_state) && sw_value > ec_config.rescaled_mode_0_actuation_threshold[row][col]) {
             *current_row |= (1 << col);
-            uprintf("Key pressed: %d, %d, %d\n", row, col, sw_value);
+            // uprintf("Key pressed: %d, %d, %d\n", row, col, sw_value);
             return true;
         }
     }
@@ -287,13 +319,13 @@ bool ec_update_key(matrix_row_t* current_row, uint8_t row, uint8_t col, uint16_t
                 // Is the key still moving down?
                 if (sw_value > ec_config.extremum[row][col]) {
                     ec_config.extremum[row][col] = sw_value;
-                    uprintf("Key pressed: %d, %d, %d\n", row, col, sw_value);
+                    // uprintf("Key pressed: %d, %d, %d\n", row, col, sw_value);
                 }
                 // Has key moved up enough to be released?
                 else if (sw_value < ec_config.extremum[row][col] - ec_config.rescaled_mode_1_release_offset[row][col]) {
                     ec_config.extremum[row][col] = sw_value;
                     *current_row &= ~(1 << col);
-                    uprintf("Key released: %d, %d, %d\n", row, col, sw_value);
+                    // uprintf("Key released: %d, %d, %d\n", row, col, sw_value);
                     return true;
                 }
             }
@@ -307,7 +339,7 @@ bool ec_update_key(matrix_row_t* current_row, uint8_t row, uint8_t col, uint16_t
                 else if (sw_value > ec_config.extremum[row][col] + ec_config.rescaled_mode_1_actuation_offset[row][col]) {
                     ec_config.extremum[row][col] = sw_value;
                     *current_row |= (1 << col);
-                    uprintf("Key pressed: %d, %d, %d\n", row, col, sw_value);
+                    // uprintf("Key pressed: %d, %d, %d\n", row, col, sw_value);
                     return true;
                 }
             }

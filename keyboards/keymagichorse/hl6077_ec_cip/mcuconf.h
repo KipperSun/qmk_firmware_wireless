@@ -38,10 +38,10 @@
 
 // ****************************** RTC ******************************
 // 内部32k
-// #undef STM32_RTCSEL
-// #define STM32_RTCSEL                        STM32_RTCSEL_LSI
-// #undef STM32_RTCPRE_VALUE
-// #define STM32_RTCPRE_VALUE                  8
-// #undef PLATFORM_RTC_USE_RTC1
-// #define PLATFORM_RTC_USE_RTC1           TRUE
+#undef STM32_RTCSEL
+#define STM32_RTCSEL                        STM32_RTCSEL_LSI
+#undef STM32_RTCPRE_VALUE
+#define STM32_RTCPRE_VALUE                  8
+#undef PLATFORM_RTC_USE_RTC1
+#define PLATFORM_RTC_USE_RTC1           TRUE
 // ****************************** RTC ******************************

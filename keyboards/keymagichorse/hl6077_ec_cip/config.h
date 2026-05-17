@@ -51,6 +51,8 @@
 #define ANALOG_PORT B1
 // 放大器使能脚
 #define OPAMP_EN_PIN A8
+// 高电平使能
+#define OPAMP_EN_ACTIVE 1 
 
 #define DEFAULT_ACTUATION_MODE 0
 #define DEFAULT_MODE_0_ACTUATION_LEVEL 550
@@ -66,7 +68,7 @@
 #define DEFAULT_BOTTOMING_READING 1023
 #define DEFAULT_CALIBRATION_STARTER true
 // 放电时间
-#define DISCHARGE_TIME 10
+#define DISCHARGE_TIME 1
 // typedef struct PACKED {
 //     uint8_t  actuation_mode;                                 1                     
 //     uint16_t mode_0_actuation_threshold;                     2

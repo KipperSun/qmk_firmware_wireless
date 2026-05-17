@@ -15,7 +15,7 @@
  */
 #include QMK_KEYBOARD_H
 #include "config.h"
-
+#include "via.h"
 #if defined(RGBLIGHT_WS2812)
 #    include "ws2812.h"
 #endif
@@ -54,7 +54,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    uprintf("process_record_user->keycode: %d, pressed: %d\r\n", keycode, record->event.pressed);
+    km_printf("process_record_user->keycode: %d, pressed: %d\r\n", keycode, record->event.pressed);
     return process_record_bhq(keycode, record);
 }
 
@@ -178,18 +178,6 @@ void lpm_device_power_close(void)
     gpio_write_pin_low(WS2812_DI_PIN);
 #endif
 }
-
-
-
-__attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
-    return via_command_bhq(data, length);
-}
-
-
-
-
-
-
 
 
 // 将未使用的引脚设置为输入模拟 
