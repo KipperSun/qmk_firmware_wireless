@@ -26,7 +26,6 @@
 #include "uart.h"
 #include "bhq_common.h"
 #include "matrix_sleep.h"
-#include "km_analog.h"
 #include "ec_switch_matrix.h"
 
 # if defined(KB_CHECK_BATTERY_ENABLED)

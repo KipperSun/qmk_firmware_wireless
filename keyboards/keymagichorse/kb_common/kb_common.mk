@@ -41,7 +41,6 @@ endif
 # 静电容
 ifeq ($(strip $(KB_EC_ENABLED)), yes)
 	OPT_DEFS += -DKB_EC_ENABLED
-	KM_ANALOG_ENABLED = yes
     ifeq ($(strip $(MUX_TYPE)), USE_74HC4051)
 	    OPT_DEFS += -DUSE_74HC4051
     endif
@@ -87,7 +86,8 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
     # 电池
     ifeq ($(strip $(KB_CHECK_BATTERY_ENABLED)), yes)
         OPT_DEFS += -DKB_CHECK_BATTERY_ENABLED
-	    KM_ANALOG_ENABLED = yes
+        ANALOG_DRIVER_REQUIRED = yes
+        OPT_DEFS += -DHAL_USE_ADC=TRUE
         SRC += kb_common/battery.c
     endif
 
@@ -97,11 +97,6 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
 
 endif
 
-# ADC  改为自己修改过的 km_analog.c
-ifeq ($(strip $(KM_ANALOG_ENABLED)), yes)
-    OPT_DEFS += -DHAL_USE_ADC=TRUE
-    SRC += kb_common/km_analog.c
-endif
 
 # rgb_matrix 闪烁功能
 ifeq ($(strip $(RGB_MATRIX_CUSTOM_BLINK_EFFECT)), yes)
