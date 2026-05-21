@@ -29,6 +29,7 @@
 
 eeprom_ec_config_t eeprom_ec_config;
 ec_config_t        ec_config;
+// ec_key_filter_t   ec_key_filter[MATRIX_ROWS][MATRIX_COLS] = {0};
 static uint32_t matrix_debug_timer = 0;
 
 // Pin and port array
@@ -255,10 +256,26 @@ bool ec_matrix_scan(matrix_row_t current_matrix[]) {
     if (timer_elapsed32(matrix_debug_timer) > 500)     // 1分钟
     {
         matrix_debug_timer = timer_read32();
-        // ec_print_matrix();
+        ec_print_matrix();
     }
     return ec_config.bottoming_calibration ? false : updated;
 }
+
+// static inline int16_t ec_filter_update(ec_key_filter_t *key, int16_t raw)
+// {
+//     // 初始化
+//     if (key->velocity == 0 && key->filtered == 0) {
+//         key->filtered = raw;
+//         return raw;
+//     }
+
+//     int16_t diff = raw - key->filtered;
+
+//     // 一阶低通（α = 1/8）
+//     key->filtered += diff >> 3;
+
+//     return key->filtered;
+// }
 
 // Read the capacitive sensor value
 uint16_t ec_readkey_raw(uint8_t channel, uint8_t row, uint8_t col) {
@@ -276,10 +293,14 @@ uint16_t ec_readkey_raw(uint8_t channel, uint8_t row, uint8_t col) {
         // Read the ADC value
         sw_value = adc_read(adcMux);
     }
+
+
     // Discharge peak hold capacitor
     discharge_capacitor();
     // Waiting for the ghost capacitor to discharge fully
     wait_us(DISCHARGE_TIME);
+
+    // int16_t filtered = ec_filter_update(&ec_key_filter[row][col], sw_value);
 
     return sw_value;
 }

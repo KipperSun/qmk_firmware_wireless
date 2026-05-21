@@ -51,6 +51,12 @@ typedef struct {
     uint16_t bottoming_reading[MATRIX_ROWS][MATRIX_COLS];                       // bottoming reading
 } ec_config_t;
 
+typedef struct
+{
+    int16_t filtered;
+    int16_t velocity;
+} ec_key_filter_t;
+
 // Check if the size of the reserved persistent memory is the same as the size of struct eeprom_ec_config_t
 _Static_assert(sizeof(eeprom_ec_config_t) == EECONFIG_KB_DATA_SIZE, "Mismatch in keyboard EECONFIG stored data");
 
