@@ -79,7 +79,10 @@ static uint8_t battery_read_percent(void) {
     }
 
     int16_t adc = analogReadPin(BATTER_ADC_PIN);
-
+    if(adc > 700)
+    {
+        return 0;
+    }
     uint16_t mv_div = (adc * 3300UL) / 1023; // 10bit
 
     battery_mv = (uint16_t)((uint32_t)mv_div * (BAT_R_UPPER + BAT_R_LOWER) / BAT_R_LOWER);
