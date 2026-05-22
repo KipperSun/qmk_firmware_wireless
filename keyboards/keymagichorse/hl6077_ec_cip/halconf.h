@@ -22,12 +22,13 @@
 #undef HAL_USE_ADC
 #define HAL_USE_ADC         TRUE
 
+#undef HAL_USE_SERIAL
+#define HAL_USE_SERIAL  TRUE        // enabled SERIAL
 // ****************************** RTC ******************************
 #undef HAL_USE_RTC
 #define HAL_USE_RTC         TRUE
 #undef STM32_RTC_HAS_PERIODIC_WAKEUPS
 #define STM32_RTC_HAS_PERIODIC_WAKEUPS  TRUE
 // ****************************** RTC ******************************
-
 #include_next <halconf.h>
 

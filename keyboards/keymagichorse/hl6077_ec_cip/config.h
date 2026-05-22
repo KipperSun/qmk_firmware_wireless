@@ -15,6 +15,14 @@
  */
 #pragma once
 
+
+
+
+
+
+
+
+// *********************************************** Cipulot 静电容配置 ***********************************************
 // 有多少个mux
 #define AMUX_COUNT 2
 // mux最大支持多少列吧，1切8  1切16  
@@ -81,13 +89,11 @@
 // 1 + 2 + 2 + 2 + 1 + 1 + ((col*row) * 2）
 #define EECONFIG_KB_DATA_SIZE (1 + 2 + 2 + 2 + 1 + 1 + ((MATRIX_ROWS * MATRIX_COLS) * 2))
 // #define DEBUG_MATRIX_SCAN_RATE
+// *********************************************** Cipulot 静电容配置 ***********************************************
 
 
 
 
-#ifndef SERIAL_NUMBER
-#   define SERIAL_NUMBER "mjl_hl6095"
-#endif
 
 #ifdef BLUETOOTH_BHQ
 // Its active level is "BHQ_IRQ_AND_INT_LEVEL of bhq.h " 
@@ -108,7 +114,6 @@
 
 #define REPORT_BUFFER_QUEUE_SIZE    68
 #define BATTER_ADC_PIN              A7
-#define BATTER_ADC_DRIVER           ADCD1
 
 
 #endif

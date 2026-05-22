@@ -199,7 +199,7 @@ void lpm_set_unused_pins_to_input_analog(void)
     palSetLineMode(A4, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A5, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A6, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(A7, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A7, PAL_MODE_INPUT_ANALOG); 
     // palSetLineMode(A8, PAL_MODE_INPUT_ANALOG); 
     // palSetLineMode(A9, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A10, PAL_MODE_INPUT_ANALOG); 
