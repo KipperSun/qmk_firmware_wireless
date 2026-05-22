@@ -27,7 +27,6 @@
 #include "bhq_common.h"
 #include "matrix_sleep.h"
 #include "ec_switch_matrix.h"
-
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
 #endif
@@ -214,7 +213,6 @@ void exit_low_power_mode_prepare(void)
 #if defined (MOUSEKEY_ENABLE)
     mousekey_clear();
 #endif
-    adcStart(&ADCD1, NULL);
     // clear_keyboard();
     // layer_clear();
     lpm_device_power_open();    // 外围设备 电源 关闭
@@ -228,7 +226,9 @@ bool lowpower_matrix_task(void)
     bool any_key_pressed = false;
     matrix_row_t raw_matrix[MATRIX_ROWS];
     any_key_pressed = ec_matrix_scan(raw_matrix);
-    // ec_print_matrix();
+#if defined(KB_DEBUG)
+    ec_print_matrix();
+#endif
     return any_key_pressed; 
 }
 void lmp_hal_init(void)
@@ -252,8 +252,9 @@ void lmp_hal_init(void)
         stInit();
         timer_init();
     chSysUnlock();
+#if defined(KB_DEBUG)
     bhq_init();
-    adcStart(&ADCD1, NULL);
+#endif
     ec_init();
 }
 void lpm_task(void)

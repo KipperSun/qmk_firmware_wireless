@@ -409,6 +409,7 @@ int16_t analogReadPinAdc(pin_t pin, uint8_t adc) {
     target.adc     = adc;
     return adc_read(target);
 }
+
 void adc_stop(adc_mux mux) {
     ADCDriver* targetDriver = intToADCDriver(mux.adc);
     if (targetDriver) {
@@ -444,8 +445,10 @@ int16_t adc_read(adc_mux mux) {
 
     manageAdcInitializationDriver(mux.adc, targetDriver);
     if (adcConvert(targetDriver, &adcConversionGroup, &sampleBuffer[0], ADC_BUFFER_DEPTH) != MSG_OK) {
+        adc_stop(mux);
         return 0;
     }
+    adc_stop(mux);
 #if ADC_BUFFER_DEPTH == 3
     // 这里就做两次平均 不会爆了int16_t 免得用u32还得多了转换过程
     int16_t adc_average = 0;
