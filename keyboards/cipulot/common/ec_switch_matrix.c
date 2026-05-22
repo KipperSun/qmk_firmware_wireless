@@ -29,7 +29,7 @@
 
 eeprom_ec_config_t eeprom_ec_config;
 ec_config_t        ec_config;
-// ec_key_filter_t   ec_key_filter[MATRIX_ROWS][MATRIX_COLS] = {0};
+static ec_key_filter_t   ec_key_filter[MATRIX_ROWS][MATRIX_COLS] = {0};
 static uint32_t matrix_debug_timer = 0;
 
 // Pin and port array
@@ -261,21 +261,31 @@ bool ec_matrix_scan(matrix_row_t current_matrix[]) {
     return ec_config.bottoming_calibration ? false : updated;
 }
 
-// static inline int16_t ec_filter_update(ec_key_filter_t *key, int16_t raw)
-// {
-//     // 初始化
-//     if (key->velocity == 0 && key->filtered == 0) {
-//         key->filtered = raw;
-//         return raw;
-//     }
-
-//     int16_t diff = raw - key->filtered;
-
-//     // 一阶低通（α = 1/8）
-//     key->filtered += diff >> 3;
-
-//     return key->filtered;
-// }
+static inline int16_t ec_filter_update(ec_key_filter_t *f, int16_t raw)
+{
+	if (!f->initialized) {
+		f->filtered = raw;
+		f->initialized = 1;
+		return raw;
+	}
+	
+	int16_t diff = raw - f->filtered;
+	int16_t abs_diff = (diff < 0) ? -diff : diff;
+	
+	
+	if(abs_diff < 200)
+	{
+		// 一分之二跟随滤波 相当于50% 跟随率
+		f->filtered += diff >> 1;
+	}
+	else
+	{
+		// 超快响应  90.9% 跟随率
+//		f->filtered += diff / 1.1;
+		f->filtered += (diff * 29) >> 5; 	// 等效于/1.1差不多
+	}
+	return f->filtered;
+}
 
 // Read the capacitive sensor value
 uint16_t ec_readkey_raw(uint8_t channel, uint8_t row, uint8_t col) {
@@ -300,9 +310,9 @@ uint16_t ec_readkey_raw(uint8_t channel, uint8_t row, uint8_t col) {
     // Waiting for the ghost capacitor to discharge fully
     wait_us(DISCHARGE_TIME);
 
-    // int16_t filtered = ec_filter_update(&ec_key_filter[row][col], sw_value);
+    int16_t filtered = ec_filter_update(&ec_key_filter[row][col], sw_value);
 
-    return sw_value;
+    return filtered;
 }
 
 // Update press/release state of key
