@@ -105,7 +105,7 @@
 #define ADC_TOTAL_CHANNELS (ADC_DUMMY_CONVERSIONS_AT_START + ADC_NUM_CHANNELS)
 
 #ifndef ADC_BUFFER_DEPTH
-#    define ADC_BUFFER_DEPTH 1
+#    define ADC_BUFFER_DEPTH 3
 #endif
 
 // For more sampling rate options, look at hal_adc_lld.h in ChibiOS
@@ -444,15 +444,29 @@ int16_t adc_read(adc_mux mux) {
 
     manageAdcInitializationDriver(mux.adc, targetDriver);
     if (adcConvert(targetDriver, &adcConversionGroup, &sampleBuffer[0], ADC_BUFFER_DEPTH) != MSG_OK) {
-        adc_stop(mux);
         return 0;
     }
-    adc_stop(mux);
-#if defined(USE_ADCV2) || defined(RP2040)
-    // fake 12-bit -> N-bit scale
-    return (sampleBuffer[ADC_DUMMY_CONVERSIONS_AT_START]) >> (12 - ADC_RESOLUTION);
+#if ADC_BUFFER_DEPTH == 3
+    // 这里就做两次平均 不会爆了int16_t 免得用u32还得多了转换过程
+    int16_t adc_average = 0;
+    // adc_guolv += sampleBuffer[0];
+    adc_average = sampleBuffer[1] + sampleBuffer[2];
+    adc_average >>= 1;
+
+    #if defined(USE_ADCV2) || defined(RP2040)
+        // fake 12-bit -> N-bit scale
+        return ((adc_average) >> (12 - ADC_RESOLUTION));
+    #else
+        // already handled as part of adcConvert
+        return adc_average;
+    #endif
 #else
-    // already handled as part of adcConvert
-    return sampleBuffer[ADC_DUMMY_CONVERSIONS_AT_START];
+    #if defined(USE_ADCV2) || defined(RP2040)
+        // fake 12-bit -> N-bit scale
+        return (sampleBuffer[ADC_DUMMY_CONVERSIONS_AT_START]) >> (12 - ADC_RESOLUTION);
+    #else
+        // already handled as part of adcConvert
+        return sampleBuffer[ADC_DUMMY_CONVERSIONS_AT_START];
+    #endif
 #endif
 }
