@@ -37,7 +37,7 @@
 #define LPM_STM32_HSE_PIN_OUT    H0
 
 #define REPORT_BUFFER_QUEUE_SIZE    68
-#define BATTER_ADC_PIN              B1
+#define BATTERY_ADC_PIN              B1
 #define BATTER_ADC_DRIVER           ADCD1
 
 #define BLE_TOG     QK_USER_0    // 切换蓝牙输出 并 开启蓝牙广播（非配对类型）

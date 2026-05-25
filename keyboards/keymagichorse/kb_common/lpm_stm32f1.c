@@ -29,6 +29,7 @@
 
 static uint32_t     lpm_timer_buffer = 0;
 static bool         lpm_time_up               = false;
+static bool         lpm_usb_init_flag   = false;
 
 
 void ws2812power_enabled(void);
@@ -56,6 +57,7 @@ void lpm_init(void)
 // usb
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
     palEnableLineEvent(USB_POWER_SENSE_PIN, PAL_EVENT_MODE_RISING_EDGE);
+    lpm_usb_init_flag   = true;
 
     lpm_device_power_open();
 }
@@ -143,8 +145,16 @@ void enter_low_power_mode_prepare(void)
     /*  USB D+/D- */
     palSetLineMode(A11, PAL_MODE_STM32_ALTERNATE_PUSHPULL);  
     palSetLineMode(A12, PAL_MODE_STM32_ALTERNATE_PUSHPULL);  
-    usb_event_queue_init();
-    init_usb_driver(&USBD1);
+    if (usb_power_connected()) 
+    {
+        usb_event_queue_init();
+        init_usb_driver(&USBD1);
+        lpm_usb_init_flag   = true;
+    }
+    else
+    {
+        lpm_usb_init_flag   = false;
+    }
 
     // /* Call debounce_free() to avoiding memory leak of debounce_counters as debounce_init()
     // invoked in matrix_init() alloc new memory to debounce_counters */
@@ -172,7 +182,17 @@ void lpm_via_activity_update(void)
 
 void lpm_task(void)
 {
-
+    if (usb_power_connected()) 
+    {
+        if(lpm_usb_init_flag == false)
+        {
+            usb_event_queue_init();
+            init_usb_driver(&USBD1);
+            lpm_usb_init_flag   = true;
+        }
+       return;
+    }
+    
     if(report_buffer_is_empty() == false)
     {
         lpm_time_up = false;

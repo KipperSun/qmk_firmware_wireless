@@ -15,6 +15,8 @@
  */
 #include <stdarg.h>
 #include "km_printf.h"
+#include "print.h"
+#include "sendchar.h"
 
 #if defined(KB_DEBUG_RTT)
     #include "SEGGER_RTT.h"
@@ -22,24 +24,27 @@
     #include "uart.h"
 #endif
 
+int8_t km_putchar(uint8_t c);
+
 void km_printf_init(void)
 {
 #if defined(KB_DEBUG_RTT)
     SEGGER_RTT_Init();
 #elif defined(KB_DEBUG_UART_BHQ)
     // BHQ 驱动已含
+    print_set_sendchar(km_putchar);
+    uprintf("\r\nHello world!1\r\n");
 #endif
-
 }
 
-
-void km_putchar(char c)
+int8_t km_putchar(uint8_t c)
 {
 #if defined(KB_DEBUG_RTT)
     SEGGER_RTT_printf(0, "%c", c);
 #elif defined(KB_DEBUG_UART_BHQ)
     uart_write(c);
 #endif
+    return 0;
 }
 
 int km_printf(const char* format, ...) {
@@ -52,16 +57,27 @@ int km_printf(const char* format, ...) {
     while (*format) {
         if (*format == '%' && format[1] == 'd') {
             format++;
-            unsigned int value = va_arg(args, unsigned int);
-            char buf[10];
-            char *p = buf + 9;
+
+            int value = va_arg(args, int);
+
+            char buf[12];
+            char *p = buf + sizeof(buf) - 1;
             *p = '\0';
-            
+
+            unsigned int u;
+
+            if (value < 0) {
+                km_putchar('-');
+                u = (unsigned int)(-value);
+            } else {
+                u = (unsigned int)value;
+            }
+
             do {
-                *--p = '0' + (value % 10);
-                value /= 10;
-            } while (value);
-            
+                *--p = '0' + (u % 10);
+                u /= 10;
+            } while (u);
+
             while (*p) {
                 km_putchar(*p++);
                 count++;
@@ -98,6 +114,96 @@ int km_printf(const char* format, ...) {
             km_putchar("0123456789abcdef"[(value >> 4) & 0x0F]);
             km_putchar("0123456789abcdef"[value & 0x0F]);
             count += 8;
+        }
+       else if (*format == '%' && format[1] == '0' && format[2] == '2' && format[3] == 'd') {
+            format += 3;
+            unsigned int value = va_arg(args, unsigned int);
+            
+            km_putchar('0' + ((value / 10) % 10));
+            km_putchar('0' + (value % 10));
+            count += 2;
+        }
+        else if (*format == '%' && format[1] == '0' && format[2] == '4' && format[3] == 'd') {
+            format += 3;
+            unsigned int value = va_arg(args, unsigned int);
+            
+            km_putchar('0' + ((value / 1000) % 10));
+            km_putchar('0' + ((value / 100) % 10));
+            km_putchar('0' + ((value / 10) % 10));
+            km_putchar('0' + (value % 10));
+            count += 4;
+        }
+        else if (*format == '%' && format[1] == '.') {  // %.1f
+            format += 1; // 跳过 %
+
+            // ===== 解析精度 %.nf =====
+            int precision = 0;
+            format++; // skip '.'
+
+            while (*format >= '0' && *format <= '9') {
+                precision = precision * 10 + (*format - '0');
+                format++;
+            }
+
+            if (*format == 'f') {
+                double value = va_arg(args, double);
+
+                // 限制最大精度 9位（避免溢出/性能问题）
+                if (precision > 9) precision = 9;
+
+                // 处理负数
+                if (value < 0) {
+                    km_putchar('-');
+                    value = -value;
+                    count++;
+                }
+
+                // ===== 整数部分 =====
+                int int_part = (int)value;
+                double frac = value - (double)int_part;
+
+                char buf[16];
+                char *p = buf + sizeof(buf) - 1;
+                *p = '\0';
+
+                unsigned int u = (unsigned int)int_part;
+                do {
+                    *--p = '0' + (u % 10);
+                    u /= 10;
+                } while (u);
+
+                while (*p) {
+                    km_putchar(*p++);
+                    count++;
+                }
+
+                // ===== 小数点 =====
+                km_putchar('.');
+                count++;
+
+                // ===== 小数部分（最多9位）=====
+                unsigned int scale = 1;
+                for (int i = 0; i < precision; i++) {
+                    scale *= 10;
+                }
+
+                // 四舍五入
+                unsigned int frac_part = (unsigned int)(frac * scale + 0.5);
+
+                // 输出补零 + 数字
+                for (int i = precision - 1; i >= 0; i--) {
+                    unsigned int pow10 = 1;
+                    for (int j = 0; j < i; j++) {
+                        pow10 *= 10;
+                    }
+
+                    unsigned int digit = (frac_part / pow10) % 10;
+                    km_putchar('0' + digit);
+                    count++;
+
+                    if (i == 0) break; // 防止 unsigned 下溢
+                }
+            }
         }
         else {
             km_putchar(*format);

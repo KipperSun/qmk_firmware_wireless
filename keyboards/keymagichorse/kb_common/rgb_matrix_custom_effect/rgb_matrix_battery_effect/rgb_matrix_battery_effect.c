@@ -53,19 +53,19 @@ bool rgb_matrix_battery_effect_hook(uint8_t led_min, uint8_t led_max)
         }
 #endif
 
-        uint8_t bat_led_count = battery_percent_get() / 10;
-        if (battery_percent_get() > 0 && bat_led_count == 0) {
+        uint8_t bat_led_count = battery_driver_sample_percent() / 10;
+        if (battery_driver_sample_percent() > 0 && bat_led_count == 0) {
             bat_led_count = 1;  
         }
         if (bat_led_count > 10) {
             bat_led_count = 10; 
         }
         uint8_t r = 0, g = 0, b = 0;
-        if (battery_percent_get() < 30) {
+        if (battery_driver_sample_percent() < 30) {
             r = rgb_bat_low_color[0];
             g = rgb_bat_low_color[1];
             b = rgb_bat_low_color[2];
-        } else if (battery_percent_get() < 70) {
+        } else if (battery_driver_sample_percent() < 70) {
             r = rgb_bat_medium_color[0];
             g = rgb_bat_medium_color[1];
             b = rgb_bat_medium_color[2];

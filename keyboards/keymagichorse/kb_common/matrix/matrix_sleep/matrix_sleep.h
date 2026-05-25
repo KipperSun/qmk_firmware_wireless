@@ -17,3 +17,4 @@
 
 
 void matrix_sleepConfig(void);
+void matrix_rtc_Config(void);

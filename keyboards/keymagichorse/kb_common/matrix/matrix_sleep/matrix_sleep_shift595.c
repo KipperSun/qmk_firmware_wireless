@@ -49,7 +49,7 @@ void matrix_sleepConfig(void)
         } 
         ATOMIC_BLOCK_FORCEON {
             gpio_set_pin_input_high(wakeUpCol_pins[i]);
-            palEnableLineEvent(wakeUpCol_pins[i], PAL_EVENT_MODE_RISING_EDGE);
+            palEnableLineEvent(wakeUpCol_pins[i], PAL_EVENT_MODE_FALLING_EDGE);
         }
     }
     for (i = 0; i < matrix_rows(); i++)
@@ -74,7 +74,7 @@ void matrix_sleepConfig(void)
         } 
         ATOMIC_BLOCK_FORCEON {
             gpio_set_pin_input_high(wakeUpRow_pins[i]);
-            palEnableLineEvent(wakeUpRow_pins[i], PAL_EVENT_MODE_RISING_EDGE);
+            palEnableLineEvent(wakeUpRow_pins[i], PAL_EVENT_MODE_FALLING_EDGE);
         }
     }
 
@@ -92,4 +92,37 @@ void matrix_sleepConfig(void)
 
 #endif
 
+}
+
+void matrix_rtc_Config(void)
+{
+    shift595_write_all(0x00);
+    shift595_pin_sleep();
+
+    uint8_t i = 0;
+#if (DIODE_DIRECTION == COL2ROW)
+    for (i = 0; i < matrix_rows(); i++)
+    { // set row output low level
+        if(wakeUpRow_pins[i] == NO_PIN)
+        {
+            continue;
+        } 
+        ATOMIC_BLOCK_FORCEON {
+            gpio_set_pin_output(wakeUpRow_pins[i]);
+            gpio_write_pin_low(wakeUpRow_pins[i]);
+        }
+    }
+#elif (DIODE_DIRECTION == ROW2COL)
+    for (i = 0; i < matrix_cols(); i++)
+    { // set col output low level
+        if(wakeUpCol_pins[i] == NO_PIN)
+        {
+            continue;
+        } 
+        ATOMIC_BLOCK_FORCEON {
+            gpio_set_pin_output(wakeUpCol_pins[i]);
+            gpio_write_pin_low(wakeUpCol_pins[i]);
+        }
+    }
+#endif
 }

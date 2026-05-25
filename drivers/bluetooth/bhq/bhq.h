@@ -77,6 +77,7 @@ void bhq_switch_rf_easy_kb(void);
 void bhq_update_battery_percent(uint8_t percent, uint16_t bat_mv);
 
 
+bool via_command_bhq(uint8_t *data, uint8_t length);
 
 void bhq_send_keyboard(uint8_t* report);
 void bhq_send_nkro(uint8_t* report);

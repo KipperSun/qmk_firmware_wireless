@@ -5,7 +5,7 @@ VPATH += ${KB_COMMON_DIR}
 
 # 日记类型 不写默认就是不打开 uart是借用蓝牙的串口的简单调试可以
 # rtt这个低功耗之后可能就用不了了，用起来就很麻烦，所以添加了uart借用bhq的串口用一下
-KB_DEBUG ?= not_debug
+KB_DEBUG ?= no
 SRC+= kb_common/km_printf.c
 ifeq ($(strip $(KB_DEBUG)), rtt)
 	OPT_DEFS += -DKB_DEBUG
@@ -17,7 +17,10 @@ endif
 ifeq ($(strip $(KB_DEBUG)), uart_bhq)
 	OPT_DEFS += -DKB_DEBUG_UART_BHQ
 	OPT_DEFS += -DKB_DEBUG
-# 
+endif   
+ifeq ($(strip $(KB_DEBUG)), no)
+    OPT_DEFS += -DNO_PRINT
+    OPT_DEFS += -DNO_DEBUG
 endif   
 
 # 矩阵扫描相关
@@ -38,7 +41,6 @@ endif
 # 静电容
 ifeq ($(strip $(KB_EC_ENABLED)), yes)
 	OPT_DEFS += -DKB_EC_ENABLED
-	KM_ANALOG_ENABLED = yes
     ifeq ($(strip $(MUX_TYPE)), USE_74HC4051)
 	    OPT_DEFS += -DUSE_74HC4051
     endif
@@ -69,7 +71,7 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
                 SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}_at32.c
             endif
 
-            ifneq ($(filter $(KB_LPM_DRIVER), lpm_stm32f4 lpm_stm32f1_rtc_mx_v1 lpm_stm32f1),)
+            ifneq ($(filter $(KB_LPM_DRIVER), lpm_stm32f4 lpm_stm32f1_rtc_mx_v1 lpm_stm32f4_rtc_mx_v1 lpm_stm32f1),)
                 SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}_stm32.c
             endif
         else
@@ -84,7 +86,8 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
     # 电池
     ifeq ($(strip $(KB_CHECK_BATTERY_ENABLED)), yes)
         OPT_DEFS += -DKB_CHECK_BATTERY_ENABLED
-	    KM_ANALOG_ENABLED = yes
+        ANALOG_DRIVER_REQUIRED = yes
+        OPT_DEFS += -DHAL_USE_ADC=TRUE
         SRC += kb_common/battery.c
     endif
 
@@ -94,11 +97,6 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
 
 endif
 
-# ADC  改为自己修改过的 km_analog.c
-ifeq ($(strip $(KM_ANALOG_ENABLED)), yes)
-    OPT_DEFS += -DHAL_USE_ADC=TRUE
-    SRC += kb_common/km_analog.c
-endif
 
 # rgb_matrix 闪烁功能
 ifeq ($(strip $(RGB_MATRIX_CUSTOM_BLINK_EFFECT)), yes)

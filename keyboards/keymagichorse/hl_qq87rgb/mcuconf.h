@@ -1,4 +1,4 @@
-/* Copyright 2019 Drew Mills
+/* Copyright 2024 keymagichorse
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,31 +16,27 @@
 
 #pragma once
 
-#include <stdint.h>
-#include "gpio.h"
+#include_next <mcuconf.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define HAL_USE_SERIAL  TRUE        // enabled SERIAL
 
-typedef struct {
-    uint16_t input;
-    uint8_t  adc;
-} adc_mux;
-#define TO_MUX(i, a) \
-    (adc_mux) {      \
-        i, a         \
-    }
+#    undef STM32_SERIAL_USE_USART2
+#    define STM32_SERIAL_USE_USART2 TRUE
 
-void analogAdcStop(pin_t pin) ; 
-int16_t analogReadPin(pin_t pin);
-int16_t analogReadPinAdc(pin_t pin, uint8_t adc);
-adc_mux pinToMux(pin_t pin);
-int16_t adc_read(adc_mux mux);
+#undef STM32_ADC_USE_ADC1
+#define STM32_ADC_USE_ADC1          TRUE
 
-void km_analogAdcStop(pin_t pin);
-int16_t km_analogReadPin(pin_t pin);
 
-#ifdef __cplusplus
-}
-#endif
+#undef STM32_PWM_USE_TIM3
+#define STM32_PWM_USE_TIM3 TRUE
+
+
+#undef STM32_PLLM_VALUE
+#undef STM32_PLLN_VALUE
+#undef STM32_PLLP_VALUE
+#undef STM32_PLLQ_VALUE
+
+#define STM32_PLLM_VALUE                    (STM32_HSECLK/1000000)
+#define STM32_PLLN_VALUE                    192
+#define STM32_PLLP_VALUE                    4
+#define STM32_PLLQ_VALUE                    4

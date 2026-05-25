@@ -22,12 +22,19 @@
 #include "transport.h"
 #include "battery.h"
 #include "km_printf.h"
+
+# if defined(KB_LPM_ENABLED)
+#   include "lpm.h"
+#endif
+
 #ifdef RAW_ENABLE
 #   include "raw_hid.h"
 #endif
+
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
 #endif
+
 // 这里用于处理连接的回调
 static wt_state_t wt_state = WT_STATE_INITIALIZED;  // 默认初始化
 
@@ -155,14 +162,24 @@ void BHQ_Protocol_Process_user(uint8_t *dat, uint16_t length)
     uint8_t cmdid = 0;
     uint8_t hid_data[32] = {0};
     
+
+
     cmdid = dat[3];
     switch(cmdid)
     {
         case 0x93:  // 无线状态处理
             BHQ_wireless_state_handle(cmdid, &dat[4]);
+#   if defined(KB_LPM_ENABLED)
+    lpm_timer_reset();  // 这里用于低功耗，刷新低功耗计时器
+    lpm_via_activity_update();
+#endif
             break;
         case 0x27:  // RAW数据
             raw_hid_receive(&dat[5],dat[4]);  
+#   if defined(KB_LPM_ENABLED)
+    lpm_timer_reset();  // 这里用于低功耗，刷新低功耗计时器
+    lpm_via_activity_update();
+#endif
             break;
         case 0x95:  // 复位模块 ack
         case 0x97:  // 设置参数 ack
@@ -174,6 +191,10 @@ void BHQ_Protocol_Process_user(uint8_t *dat, uint16_t length)
                 hid_data[i] = dat[i];
             }
             raw_hid_send(hid_data, 32);
+#   if defined(KB_LPM_ENABLED)
+    lpm_timer_reset();  // 这里用于低功耗，刷新低功耗计时器
+    lpm_via_activity_update();
+#endif
             break;
     }
     // km_printf("BHQ cmdid:%02x user\n",dat[3]);

@@ -37,8 +37,9 @@ ifeq ($(strip $(CONSOLE_ENABLE)), yes)
     OPT_DEFS += -DCONSOLE_ENABLE
 else
     # TODO: decouple this so other print backends can exist
-    OPT_DEFS += -DNO_PRINT
-    OPT_DEFS += -DNO_DEBUG
+    # TODO: 暂时先让他存在吧,只有引用了我的km_command 不debug的时候，会设置NO_PRINT和NO_DEBUG
+    # OPT_DEFS += -DNO_PRINT
+    # OPT_DEFS += -DNO_DEBUG
 endif
 
 ifeq ($(strip $(NKRO_ENABLE)), yes)

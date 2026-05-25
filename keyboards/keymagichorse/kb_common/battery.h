@@ -22,7 +22,7 @@
 #    define BATTERY_MAX_MV     4150
 #endif
 #ifndef BATTERY_MIN_MV                      
-#    define BATTERY_MIN_MV     3410
+#    define BATTERY_MIN_MV     3450
 #endif
 
 // ------------------------ 电池分压电阻的配置 ------------------------
@@ -53,7 +53,7 @@
 void battery_init(void);
 void battery_task(void);
 void battery_reset_timer(void);
-uint8_t battery_percent_get(void);
+uint8_t battery_driver_sample_percent(void);
 
 void battery_percent_changed_user(uint8_t level);
 void battery_percent_changed_kb(uint8_t level);
