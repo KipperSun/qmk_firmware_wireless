@@ -113,7 +113,7 @@
 #define LPM_STM32_HSE_PIN_OUT    H0
 
 #define REPORT_BUFFER_QUEUE_SIZE    68
-#define BATTER_ADC_PIN              A7
+#define BATTERY_ADC_PIN              A7
 
 
 #endif

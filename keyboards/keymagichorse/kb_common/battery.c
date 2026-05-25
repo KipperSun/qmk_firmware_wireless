@@ -41,7 +41,6 @@ static void battery_percent_update_wireless(void) {
 static uint8_t calculate_battery_percentage(uint16_t mv) {
     if (mv >= BATTERY_MAX_MV) return 100;
     if (mv <= BATTERY_MIN_MV) return 0;
-
     return (uint8_t)(((uint32_t)(mv - BATTERY_MIN_MV) * 100) / (BATTERY_MAX_MV - BATTERY_MIN_MV));
 }
 
@@ -78,7 +77,7 @@ static uint8_t battery_read_percent(void) {
         return 1;
     }
 
-    int16_t adc = analogReadPin(BATTER_ADC_PIN);
+    int16_t adc = analogReadPin(BATTERY_ADC_PIN);
     if(adc > 700)
     {
         return 0;
@@ -138,7 +137,7 @@ void battery_reset_timer(void) {
     battery_report_timer = timer_read32();
 }
 
-uint8_t battery_percent_get(void) {
+uint8_t battery_driver_sample_percent(void) {
     return battery_has_valid_sample ? battery_percent : 0xFF;
 }
 

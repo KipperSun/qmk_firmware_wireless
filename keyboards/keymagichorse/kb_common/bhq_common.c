@@ -221,37 +221,42 @@ void bhq_switch_host_task(void){
 }
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
-void battery_percent_changed_user(uint8_t level)
+void bhq_common_battery_low_task(void)
 {
-    km_printf("bat--%d\n",level);
+    static uint8_t last_sta = 255;
+    uint8_t sta;
+
     if (usb_power_connected()) {
-        if (bhq_bat_low_sta != 0) {
-            bhq_bat_low_sta = 0;
-            bluetooth_enabled();  // USB供电时确保蓝牙开启
-        }
-        return;
-    }
-    uint8_t battery_percent = level;
-    if (battery_percent <= 5) {
-        if (bhq_bat_low_sta != 2) {
-            bhq_bat_low_sta = 2;
-            bluetooth_disabled();         // 严重低电量时禁用蓝牙
-            km_printf("bat <= 5\n");
-        }
-    } 
-    else if (battery_percent <= 10) {
-        if (bhq_bat_low_sta != 1) {
-            bhq_bat_low_sta = 1;
-            bluetooth_enabled(); 
-            km_printf("bat <= 10\n");
-        }
+        sta = 0;
     } 
     else {
-        if (bhq_bat_low_sta != 0) {
-            bhq_bat_low_sta = 0; // 电量恢复正常
-            bluetooth_enabled(); // 确保蓝牙开启
-            battery_enable_ble_update();
+        uint8_t battery_percent = battery_driver_sample_percent();
+
+        if (battery_percent <= 5) {
+            sta = 2;
+        } 
+        else if (battery_percent <= 10) {
+            sta = 1;
+        } 
+        else {
+            sta = 0;
         }
+    }
+
+    if (sta == last_sta) return;
+
+    last_sta = sta;
+    bhq_bat_low_sta = sta;
+
+    if (sta == 0) {
+        bluetooth_enabled();
+        battery_enable_ble_update();
+    } 
+    else if (sta == 1) {
+        bluetooth_enabled();
+    } 
+    else { // sta == 2
+        bluetooth_disabled();
     }
 }
 
@@ -262,6 +267,7 @@ void bhq_wireless_task(void)
     bhq_switch_host_task();
 # if defined(KB_CHECK_BATTERY_ENABLED)
     battery_task();
+    bhq_common_battery_low_task();
 #endif
 }
 
