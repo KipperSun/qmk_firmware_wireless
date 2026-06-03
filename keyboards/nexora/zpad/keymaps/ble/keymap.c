@@ -567,8 +567,8 @@ void lpm_set_unused_pins_to_input_analog(void)
 // ------------------------ 电池分压电阻的配置 ------------------------
 
 // ------------------------ 电池电压读取的引脚 ------------------------
-#ifndef BATTER_ADC_PIN                       
-#    define BATTER_ADC_PIN     B1
+#ifndef BATTERY_ADC_PIN                       
+#    define BATTERY_ADC_PIN     B1
 #endif
 // https://docs.qmk.fm/drivers/adc#stm32
 #ifndef BATTER_ADC_DRIVER                      
@@ -605,8 +605,8 @@ void battery_percent_read_task(void)
     if (timer_elapsed32(battery_timer) > 2000) 
     {
         battery_timer = 0;
-        uint16_t adc = analogReadPin(BATTER_ADC_PIN);
-        adc = analogReadPin(BATTER_ADC_PIN);
+        uint16_t adc = analogReadPin(BATTERY_ADC_PIN);
+        adc = analogReadPin(BATTERY_ADC_PIN);
 
         uint16_t voltage_mV_Fenya = (adc * 3300) / 1023;
         uint16_t voltage_mV_actual = voltage_mV_Fenya  * (1 + (BAT_R_UPPER / BAT_R_LOWER));

@@ -65,6 +65,9 @@
 #    include "led_matrix.h"
 #endif
 
+#if defined(BLUETOOTH_BHQ)
+#    include "bhq.h"
+#endif
 // Can be called in an overriding via_init_kb() to test if keyboard level code usage of
 // EEPROM is invalid and use/save defaults.
 bool via_eeprom_is_valid(void) {
@@ -290,6 +293,15 @@ __attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);
+
+
+#if defined(BLUETOOTH_BHQ)
+    // If via_command_kb() returns true, the command was fully
+    // handled, including calling raw_hid_send()
+    if (via_command_bhq(data, length)) {
+        return;
+    }
+#endif
 
     // If via_command_kb() returns true, the command was fully
     // handled, including calling raw_hid_send()

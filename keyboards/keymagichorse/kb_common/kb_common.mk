@@ -5,7 +5,7 @@ VPATH += ${KB_COMMON_DIR}
 
 # 日记类型 不写默认就是不打开 uart是借用蓝牙的串口的简单调试可以
 # rtt这个低功耗之后可能就用不了了，用起来就很麻烦，所以添加了uart借用bhq的串口用一下
-KB_DEBUG ?= not_debug
+KB_DEBUG ?= no
 SRC+= kb_common/km_printf.c
 ifeq ($(strip $(KB_DEBUG)), rtt)
 	OPT_DEFS += -DKB_DEBUG
@@ -17,15 +17,15 @@ endif
 ifeq ($(strip $(KB_DEBUG)), uart_bhq)
 	OPT_DEFS += -DKB_DEBUG_UART_BHQ
 	OPT_DEFS += -DKB_DEBUG
-# 
+endif   
+ifeq ($(strip $(KB_DEBUG)), no)
+    OPT_DEFS += -DNO_PRINT
+    OPT_DEFS += -DNO_DEBUG
 endif   
 
 # 矩阵扫描相关
 MATRIX_TYPE ?= default
 ifneq ($(filter $(MATRIX_TYPE), default shift595),)
-    VPATH += ${KB_COMMON_DIR}/matrix/matrix_type
-    VPATH += ${KB_COMMON_DIR}/matrix/matrix_sleep
-    SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}.c
     ifeq ($(strip $(MATRIX_TYPE)), shift595)
         OPT_DEFS += -DSHIFT595_ENABLED
         CUSTOM_MATRIX = lite	
@@ -41,7 +41,6 @@ endif
 # 静电容
 ifeq ($(strip $(KB_EC_ENABLED)), yes)
 	OPT_DEFS += -DKB_EC_ENABLED
-	KM_ANALOG_ENABLED = yes
     ifeq ($(strip $(MUX_TYPE)), USE_74HC4051)
 	    OPT_DEFS += -DUSE_74HC4051
     endif
@@ -58,16 +57,37 @@ endif
 
 # 蓝牙
 ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
-    # 低功耗
+
+    # 低功耗 start
     ifeq ($(strip $(KB_LPM_ENABLED)), yes)
         OPT_DEFS += -DKB_LPM_ENABLED
         OPT_DEFS += -DKB_LPM_DRIVER
+        
+        # 矩阵唤醒方式
+        VPATH += ${KB_COMMON_DIR}/matrix/matrix_type
+        VPATH += ${KB_COMMON_DIR}/matrix/matrix_sleep
+        ifeq ($(strip $(MATRIX_TYPE)), default)
+            ifeq ($(strip $(KB_LPM_DRIVER)), lpm_at32f415)
+                SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}_at32.c
+            endif
+
+            ifneq ($(filter $(KB_LPM_DRIVER), lpm_stm32f4 lpm_stm32f1_rtc_mx_v1 lpm_stm32f4_rtc_mx_v1 lpm_stm32f1),)
+                SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}_stm32.c
+            endif
+        else
+            SRC+= kb_common/matrix/matrix_sleep/matrix_sleep_${MATRIX_TYPE}.c
+        endif
+        # 矩阵唤醒方式选择
+
         SRC += kb_common/${KB_LPM_DRIVER}.c
     endif
+    # 低功耗 end
+
     # 电池
     ifeq ($(strip $(KB_CHECK_BATTERY_ENABLED)), yes)
         OPT_DEFS += -DKB_CHECK_BATTERY_ENABLED
-	    KM_ANALOG_ENABLED = yes
+        ANALOG_DRIVER_REQUIRED = yes
+        OPT_DEFS += -DHAL_USE_ADC=TRUE
         SRC += kb_common/battery.c
     endif
 
@@ -77,11 +97,6 @@ ifeq ($(strip $(BLUETOOTH_DRIVER)), bhq)
 
 endif
 
-# ADC  改为自己修改过的 km_analog.c
-ifeq ($(strip $(KM_ANALOG_ENABLED)), yes)
-    OPT_DEFS += -DHAL_USE_ADC=TRUE
-    SRC += kb_common/km_analog.c
-endif
 
 # rgb_matrix 闪烁功能
 ifeq ($(strip $(RGB_MATRIX_CUSTOM_BLINK_EFFECT)), yes)
@@ -91,6 +106,11 @@ endif
     OPT_DEFS += -DRGB_MATRIX_CUSTOM_BLINK_EFFECT
     VPATH += ${KB_COMMON_DIR}/rgb_matrix_custom_effect/rgb_matrix_blink_effect
     SRC += kb_common/rgb_matrix_custom_effect/rgb_matrix_blink_effect/rgb_matrix_blink_effect.c
+    
+    # 通过keycode获取rgb index的
+    VPATH += ${KB_COMMON_DIR}/rgb_matrix_custom_effect/rgb_matrix_index_by_wireless_keycode
+    SRC += kb_common/rgb_matrix_custom_effect/rgb_matrix_index_by_wireless_keycode/rgb_matrix_index_by_wireless_keycode.c
+    
 endif
 # rgb_matrix 电量百分比显示功能
 ifeq ($(strip $(RGB_MATRIX_CUSTOM_BATTERY_EFFECT)), yes)

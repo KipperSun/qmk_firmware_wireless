@@ -320,7 +320,8 @@ void lpm_set_unused_pins_to_input_analog(void)
     palSetLineMode(A8, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A9, PAL_MODE_INPUT_ANALOG); 
     // palSetLineMode(A10, PAL_MODE_INPUT_ANALOG); 
-    palSetLineMode(A11, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A11, PAL_MODE_INPUT_ANALOG); 
+    // palSetLineMode(A12, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A13, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(A14, PAL_MODE_INPUT_ANALOG); 
     // palSetLineMode(A15, PAL_MODE_INPUT_ANALOG); 
@@ -340,4 +341,8 @@ void lpm_set_unused_pins_to_input_analog(void)
     palSetLineMode(B13, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(B14, PAL_MODE_INPUT_ANALOG); 
     palSetLineMode(B15, PAL_MODE_INPUT_ANALOG); 
+
+    palSetLineMode(C13, PAL_MODE_INPUT_ANALOG); 
+    palSetLineMode(C14, PAL_MODE_INPUT_ANALOG); 
+    palSetLineMode(C15, PAL_MODE_INPUT_ANALOG); 
 }

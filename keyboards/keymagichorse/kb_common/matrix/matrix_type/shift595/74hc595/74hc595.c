@@ -32,18 +32,15 @@ void shift595_pin_sleep(void)
     gpio_write_pin_low(SHCP_PIN_74HC595);
     gpio_write_pin_low(STCP_PIN_74HC595);
 }
-// 用于短延时
-#define small_delay() __asm__ __volatile__("nop;nop;nop;\n\t" ::: "memory")
-#define compiler_barrier() __asm__ __volatile__("" ::: "memory")
 
 void shift595_write_all(shift595_data_t data) {
-    ATOMIC_BLOCK_FORCEON {
+    // ATOMIC_BLOCK_FORCEON {
         // 从高位芯片开始输出（最后一个芯片先移入）
         for (int8_t chip = I_595_NUM - 1; chip >= 0; chip--) {
             uint8_t byteOut = (uint8_t)(data >> (chip * 8));
 
             for (uint8_t bit = 0; bit < 8; bit++) {
-                compiler_barrier();
+                
 
                 if (byteOut & 0x80) {
                     gpio_write_pin_high(DS_PIN_74HC595);
@@ -53,19 +50,19 @@ void shift595_write_all(shift595_data_t data) {
 
                 byteOut <<= 1;
 
-                compiler_barrier();
+                
                 gpio_write_pin_high(SHCP_PIN_74HC595);
-                small_delay();
+                
                 gpio_write_pin_low(SHCP_PIN_74HC595);
             }
         }
 
-        compiler_barrier();
+        
         gpio_write_pin_high(STCP_PIN_74HC595);  // 锁存输出
-        small_delay();
+        
         gpio_write_pin_low(STCP_PIN_74HC595);
-        compiler_barrier();
-    }
+        
+    // }
 }
 
 void shift595_write_pin_ex(uint8_t pin_index, uint8_t level, uint8_t other_level) {

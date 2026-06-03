@@ -26,16 +26,14 @@
 #include "uart.h"
 #include "bhq_common.h"
 #include "matrix_sleep.h"
+#include "bluetooth.h"
 # if defined(KB_CHECK_BATTERY_ENABLED)
 #   include "battery.h"
 #endif
 
-#if SHIFT595_ENABLED
-#   include "74hc595.h"
-#endif
-
-static uint32_t     lpm_timer_buffer = 0;
-static bool         lpm_time_up               = false;
+static uint32_t     lpm_timer_buffer    = 0;
+static bool         lpm_time_up         = false;
+static bool         lpm_usb_init_flag   = false;
 
 // use for config wakeUp Pin
 // static const pin_t wakeUpRow_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
@@ -66,6 +64,7 @@ void lpm_init(void)
     // usb
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
     palEnableLineEvent(USB_POWER_SENSE_PIN, PAL_EVENT_MODE_RISING_EDGE);
+    lpm_usb_init_flag   = true;
 
     lpm_device_power_open();
 }
@@ -129,7 +128,7 @@ void enter_low_power_mode_prepare(void)
 
     gpio_set_pin_input_low(BHQ_IQR_PIN);
     palEnableLineEvent(BHQ_IQR_PIN, PAL_EVENT_MODE_RISING_EDGE);
-    gpio_write_pin_low(BHQ_INT_PIN);
+    gpio_set_pin_input(BHQ_INT_PIN);
 
 // usb 插入检测
     gpio_set_pin_input(USB_POWER_SENSE_PIN);
@@ -157,7 +156,17 @@ void enter_low_power_mode_prepare(void)
     /*  USB D+/D- */
     palSetLineMode(A11, PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUPDR_FLOATING | PAL_MODE_ALTERNATE(10U));
     palSetLineMode(A12, PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUPDR_FLOATING | PAL_MODE_ALTERNATE(10U));
- 
+    if (usb_power_connected()) 
+    {
+        usb_event_queue_init();
+        init_usb_driver(&USBD1);
+        lpm_usb_init_flag   = true;
+    }
+    else
+    {
+        lpm_usb_init_flag   = false;
+    }
+
     // /* Call debounce_free() to avoiding memory leak of debounce_counters as debounce_init()
     // invoked in matrix_init() alloc new memory to debounce_counters */
     // debounce_free();
@@ -178,23 +187,25 @@ void enter_low_power_mode_prepare(void)
     lpm_device_power_open();    // 外围设备 电源 关闭
   
     gpio_write_pin_high(BHQ_INT_PIN);
-
+    report_keyboard_t report = {0};
+    bluetooth_send_keyboard(&report);   // 往里面填充一个空的按键包
 }
 
-
+void lpm_via_activity_update(void)
+{
+    // TODO：这里可以无需实现
+}
 
 void lpm_task(void)
 {
-    if (usb_power_connected() && USBD1.state == USB_STOP) {
-        /*  USB D+/D- */
-        palSetLineMode(A11, PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUPDR_FLOATING | PAL_MODE_ALTERNATE(10U));
-        palSetLineMode(A12, PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUPDR_FLOATING | PAL_MODE_ALTERNATE(10U));
-        usb_event_queue_init();
-        init_usb_driver(&USBD1);
-    }
-    
     if (usb_power_connected()) 
     {
+        if(lpm_usb_init_flag == false)
+        {
+            usb_event_queue_init();
+            init_usb_driver(&USBD1);
+            lpm_usb_init_flag   = true;
+        }
        return;
     }
 

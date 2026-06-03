@@ -15,6 +15,7 @@
  */
 
 #pragma once
+#include "print.h"
 
 void km_printf_init(void);
 int km_printf(const char* format, ...);

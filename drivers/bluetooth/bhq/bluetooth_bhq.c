@@ -17,7 +17,8 @@
 #include "bluetooth_bhq.h"
 #include "bhq.h"
 #include "report_buffer.h"
-
+#include "transport.h"
+#include "host.h"
 uint8_t bhq_led_sta = 0;
 
 void bluetooth_bhq_init(void) {
@@ -185,3 +186,33 @@ uint8_t bluetooth_bhq_get_keyboard_leds(void)
     return bhq_led_sta;
 }
 
+
+bool via_command_bhq(uint8_t *data, uint8_t length) {
+    // 此逻辑删除 会失去蓝牙模块升级功能 以及蓝牙改键功能 ！
+    uint8_t command_id   = data[0];
+
+    // uint8_t i = 0;
+    // bhq_printf("cmdid:%02x  length:%d\r\n",command_id,length);
+    // bhq_printf("read host app of data \r\n[");
+    // for (i = 0; i < length; i++)
+    // {
+    //     bhq_printf("%02x ",data[i]);
+    // }
+    // bhq_printf("]\r\n");
+
+    if(command_id == 0xF1)
+    {
+        // cmdid + 2 frame headers 
+        // The third one is isack the fourth one is length and the fifth one is data frame
+        BHQ_SendCmd(0, &data[4], data[3]);
+        return true;
+    }
+    // 让QMK键盘强制设置为USB模式
+    if(command_id == 0xF2)
+    {
+        transport_set(KB_TRANSPORT_USB);
+        host_raw_hid_send(data,length);
+        return true;
+    }
+    return false;
+}

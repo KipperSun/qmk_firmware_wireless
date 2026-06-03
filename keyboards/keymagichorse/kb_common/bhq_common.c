@@ -86,9 +86,9 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
             keycode != BLE_RESET &&
             keycode != BLE_OFF
         ) {
-            if((IS_BLE_TRANSPORT(transport_get()) == true))
+            if(wireless_get() == WT_STATE_DISCONNECTED || wireless_get() == WT_STATE_RESET || wireless_get() == WT_STATE_INITIALIZED )
             {
-                if(wireless_get() == WT_STATE_DISCONNECTED || wireless_get() == WT_STATE_RESET || wireless_get() == WT_STATE_INITIALIZED )
+                if((IS_BLE_TRANSPORT(transport_get()) == true))
                 {
                     // 检查传输模式是否为蓝牙模式
                     // KB_TRANSPORT_BLUETOOTH_1 在枚举 里面是2、在蓝牙通道内是0
@@ -165,6 +165,10 @@ bool process_record_bhq(uint16_t keycode, keyrecord_t *record) {
                 // 切换到usb模式 并 关闭蓝牙广播
                 bhq_CloseBleAdvertising();
                 transport_set(KB_TRANSPORT_USB);  
+                clear_mods();
+                clear_oneshot_mods();
+                clear_weak_mods();
+                send_keyboard_report();
             }
             return true;
         }
@@ -204,7 +208,7 @@ void bhq_switch_host_task(void){
                     key_ble_host_index = 2;
                     break;
             }
-            // km_printf("key long down:bleid->%d\n",key_ble_host_index);
+            km_printf("key long down:bleid->%d\n",key_ble_host_index);
             // 打开配对广播
             bhq_SetPairingMode(key_ble_host_index, 30);
             transport_set(key_ble_host_index + KB_TRANSPORT_BLUETOOTH_1);  
@@ -217,34 +221,42 @@ void bhq_switch_host_task(void){
 }
 
 # if defined(KB_CHECK_BATTERY_ENABLED)
-void battery_percent_changed_user(uint8_t level)
+void bhq_common_battery_low_task(void)
 {
+    static uint8_t last_sta = 255;
+    uint8_t sta;
+
     if (usb_power_connected()) {
-        if (bhq_bat_low_sta != 0) {
-            bhq_bat_low_sta = 0;
-            bluetooth_enabled();  // USB供电时确保蓝牙开启
-        }
-        return;
-    }
-    uint8_t battery_percent = level;
-    if (battery_percent <= 5) {
-        if (bhq_bat_low_sta != 2) {
-            bhq_bat_low_sta = 2;
-            bluetooth_disabled();         // 严重低电量时禁用蓝牙
-        }
-    } 
-    else if (battery_percent <= 10) {
-        if (bhq_bat_low_sta != 1) {
-            bhq_bat_low_sta = 1;
-            bluetooth_enabled(); 
-        }
+        sta = 0;
     } 
     else {
-        if (bhq_bat_low_sta != 0) {
-            bhq_bat_low_sta = 0; // 电量恢复正常
-            bluetooth_enabled(); // 确保蓝牙开启
-            battery_enable_ble_update();
+        uint8_t battery_percent = battery_driver_sample_percent();
+
+        if (battery_percent <= 5) {
+            sta = 2;
+        } 
+        else if (battery_percent <= 10) {
+            sta = 1;
+        } 
+        else {
+            sta = 0;
         }
+    }
+
+    if (sta == last_sta) return;
+
+    last_sta = sta;
+    bhq_bat_low_sta = sta;
+
+    if (sta == 0) {
+        bluetooth_enabled();
+        battery_enable_ble_update();
+    } 
+    else if (sta == 1) {
+        bluetooth_enabled();
+    } 
+    else { // sta == 2
+        bluetooth_disabled();
     }
 }
 
@@ -255,42 +267,7 @@ void bhq_wireless_task(void)
     bhq_switch_host_task();
 # if defined(KB_CHECK_BATTERY_ENABLED)
     battery_task();
+    bhq_common_battery_low_task();
 #endif
 }
 
-// Keyboard level code can override this, but shouldn't need to.
-// Controlling custom features should be done by overriding
-// via_custom_value_command_kb() instead.
-bool via_command_bhq(uint8_t *data, uint8_t length) {
-    // 此逻辑删除 会失去蓝牙模块升级功能 以及蓝牙改键功能 ！
-    uint8_t command_id   = data[0];
-
-#   if defined(KB_LPM_ENABLED)
-    lpm_timer_reset();  // 这里用于低功耗，刷新低功耗计时器
-#endif
-
-    // uint8_t i = 0;
-    // km_printf("cmdid:%02x  length:%d\r\n",command_id,length);
-    // km_printf("read host app of data \r\n[");
-    // for (i = 0; i < length; i++)
-    // {
-    //     km_printf("%02x ",data[i]);
-    // }
-    // km_printf("]\r\n");
-
-    if(command_id == 0xF1)
-    {
-        // cmdid + 2 frame headers 
-        // The third one is isack the fourth one is length and the fifth one is data frame
-        BHQ_SendCmd(0, &data[4], data[3]);
-        return true;
-    }
-    // 让QMK键盘强制设置为USB模式
-    if(command_id == 0xF2)
-    {
-        transport_set(KB_TRANSPORT_USB);
-        host_raw_hid_send(data,length);
-        return true;
-    }
-    return false;
-}
